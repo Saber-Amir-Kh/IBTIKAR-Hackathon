@@ -22,11 +22,11 @@ clean_stream = str(raw_stream).split("#")[0].strip()
 STREAM_URL = clean_stream
 
 SPRING_URL = os.getenv("SPRING_URL", "http://localhost:8080")
-AI_PORT = int(os.getenv("AI_PORT", "8000"))
+AI_PORT = int(os.getenv("AI_PORT", "8001"))
 CONFIDENCE_THRESHOLD = float(os.getenv("CONFIDENCE_THRESHOLD", "0.75"))
 SUSTAINED_FRAMES = int(os.getenv("SUSTAINED_FRAMES", "5"))
 COOLDOWN_SECONDS = float(os.getenv("COOLDOWN_SECONDS", "60.0"))
-FRAME_SKIP = int(os.getenv("FRAME_SKIP", "2")) # Evaluate every 2nd frame for responsive feedback
+FRAME_SKIP = int(os.getenv("FRAME_SKIP", "2"))
 SNAPSHOTS_DIR = os.getenv("SNAPSHOTS_DIR", "./snapshots")
 
 os.makedirs(SNAPSHOTS_DIR, exist_ok=True)
@@ -121,11 +121,17 @@ def test_trigger(seconds: float = 6.0):
     ingester.trigger_simulated_fire(duration_sec=seconds)
     return {"status": "ok", "message": f"Flamme simulée injectée pendant {seconds}s."}
 
+class StandaloneServer(uvicorn.Server):
+    """Custom Uvicorn server that skips signal handler registration so it runs in background thread."""
+    def install_signal_handlers(self):
+        pass
+
 def start_fastapi():
     """Starts FastAPI in a background daemon thread."""
     try:
         config = uvicorn.Config(app, host="0.0.0.0", port=AI_PORT, log_level="warning")
-        server = uvicorn.Server(config)
+        server = StandaloneServer(config)
+        print(f"[FastAPI] Serveur web prêt sur http://localhost:{AI_PORT} (Flux vidéo: http://localhost:{AI_PORT}/proxy_feed)")
         server.run()
     except Exception as e:
         print(f"[FastAPI] Erreur démarrage serveur sur le port {AI_PORT}: {e}")
@@ -137,17 +143,21 @@ def main():
     # Start FastAPI background server
     api_thread = threading.Thread(target=start_fastapi, daemon=True)
     api_thread.start()
-    time.sleep(0.5)
+    time.sleep(0.8)
 
     window_title = "Sentinelle Algerie -- IA Vision Feu en Direct (Touche Q pour quitter)"
-    cv2.namedWindow(window_title, cv2.WINDOW_NORMAL)
-    cv2.resizeWindow(window_title, 800, 600)
+    try:
+        cv2.namedWindow(window_title, cv2.WINDOW_NORMAL)
+        cv2.resizeWindow(window_title, 800, 600)
+    except Exception as e:
+        print(f"[OpenCV] Notice: {e}")
 
     print("\n" + "="*70)
     print("  SENTINELLE ALGÉRIE -- VISION IA DÉTECTION FEU DE FORÊT")
     print("="*70)
     print(f"  * Source vidéo     : {STREAM_URL} ({ingester.source_description})")
     print(f"  * Port serveur API : http://localhost:{AI_PORT}")
+    print(f"  * Flux Web React   : http://localhost:{AI_PORT}/proxy_feed")
     print(f"  * Fenêtre OpenCV   : OUVERTE sur votre écran !")
     print(f"  * Pour tester      : Allumez un briquet ou passez une vidéo de feu")
     print("="*70 + "\n")

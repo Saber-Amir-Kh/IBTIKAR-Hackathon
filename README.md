@@ -11,12 +11,12 @@ Le dépôt est composé de trois briques autonomes :
 ```
 /Spring-project/IBTIKAR-Hackathon  — Backend Principal Spring Boot 3.4 (Port 8080)
 /React-project                     — Interface Opérationnelle React + Vite + Leaflet (Port 5173)
-/Python                            — Microservice IA Détection Feu & Fumée FastAPI (Port 8000)
+/Python                            — Microservice IA Détection Feu & Fumée FastAPI (Port 8001)
 ```
 
 - **Backend Spring Boot (Port 8080)** : Cœur décisionnel unique, simulation télémétrique des drones patrouilleurs (Tikjda, Djebel Chenoua, Béni Yenni), base de données MySQL (`wildfire_db`), hub WebSocket temps-réel (`/ws`), cycle de vie des incidents, diffusion des alertes bilingues Tajmaât (FR/AR), bourse d'entraide logistique et générateur de parcelles de reboisement.
 - **Frontend React (Port 5173)** : Dashboard de supervision d'urgence avec carte Leaflet de l'Algérie du Nord, sélecteur de rôles sans mot de passe, vidéo en direct, journal d'audit des événements et planificateur de reboisement avec coloration dynamique des parcelles (terre brûlée vers vert forêt).
-- **Microservice IA Python (Port 8000)** : Capteur sans état capturant le flux vidéo (`STREAM_URL`), détection YOLOv8n / heuristique couleur+mouvement, filtre de déclenchement soutenu (5 images consécutives >= 75%) avec refroidissement anti-spam (60s), serveur de snapshots et proxy MJPEG.
+- **Microservice IA Python (Port 8001)** : Capteur sans état capturant le flux vidéo (`STREAM_URL`), détection YOLOv8n / heuristique couleur+mouvement, filtre de déclenchement soutenu (5 images consécutives >= 75%) avec refroidissement anti-spam (60s), serveur de snapshots et proxy MJPEG.
 
 ---
 
@@ -43,12 +43,9 @@ npm run dev
 
 ```powershell
 cd "Python"
-.\run.ps1
-# Ou manuellement :
-# .\venv\Scripts\activate
-# python main.py
+.\venv\Scripts\python.exe main.py
 ```
-*Accessible sur http://localhost:8000 (Documentation Swagger sur http://localhost:8000/docs).*
+*Accessible sur http://localhost:8001 (Documentation Swagger sur http://localhost:8001/docs).*
 
 > **Astuce caméra** : Pour pointer le microservice sur votre webcam locale plutôt que le Raspberry Pi, modifiez `STREAM_URL=0` dans `Python/.env`. Si aucune caméra n'est connectée, le service génère automatiquement un flux de surveillance synthétique réaliste pour que la démo ne plante jamais.
 

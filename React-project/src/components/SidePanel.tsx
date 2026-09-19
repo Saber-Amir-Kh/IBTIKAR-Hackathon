@@ -10,7 +10,16 @@ interface SidePanelProps {
 export const SidePanel: React.FC<SidePanelProps> = ({ events, onClearEvents }) => {
   const [streamError, setStreamError] = useState(false);
   const [activeTab, setActiveTab] = useState<'video' | 'feed'>('video');
-  const aiPort = (import.meta as any).env?.VITE_AI_PORT || '8000';
+  const [aiPort, setAiPort] = useState<string>('8001');
+
+  const handleStreamError = () => {
+    if (aiPort === '8001') {
+      // Try fallback port 8000
+      setAiPort('8000');
+    } else {
+      setStreamError(true);
+    }
+  };
 
   return (
     <div className="side-panel">
@@ -46,19 +55,22 @@ export const SidePanel: React.FC<SidePanelProps> = ({ events, onClearEvents }) =
                 src={`http://localhost:${aiPort}/proxy_feed`}
                 alt="Flux Vidéo Drone Surveillance"
                 className="live-video-stream"
-                onError={() => setStreamError(true)}
+                onError={handleStreamError}
               />
             ) : (
               <div className="video-fallback">
                 <AlertCircle size={40} className="icon-muted" />
-                <h4>Microservice IA Python Déconnecté</h4>
+                <h4>Flux Caméra IA en Attente</h4>
                 <p>
-                  Le flux direct sera actif dès que <code>python main.py</code> est lancé sur le port {aiPort}.
+                  Assurez-vous que <code>python main.py</code> est lancé dans le dossier <code>Python</code>.
                 </p>
-                <div className="fallback-badge">Simulation Autonome Spring Boot Active</div>
+                <div className="fallback-badge">Port {aiPort}</div>
                 <button
                   className="btn btn-secondary btn-sm mt-2"
-                  onClick={() => setStreamError(false)}
+                  onClick={() => {
+                    setStreamError(false);
+                    setAiPort('8001');
+                  }}
                 >
                   <Radio size={14} /> Réessayer la connexion
                 </button>
