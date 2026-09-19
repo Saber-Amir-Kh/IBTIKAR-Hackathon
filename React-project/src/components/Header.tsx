@@ -1,5 +1,5 @@
 import React from 'react';
-import { Flame, Radio, RefreshCw, Zap } from 'lucide-react';
+import { Flame, Radio, Zap } from 'lucide-react';
 import type { User } from '../types';
 
 interface HeaderProps {
@@ -7,10 +7,8 @@ interface HeaderProps {
   users: User[];
   onSelectUser: (user: User) => void;
   wsConnected: boolean;
-  onTriggerDemo: () => void;
-  onResetDemo: () => void;
-  isTriggering: boolean;
-  isResetting: boolean;
+  onToggleDemoTools: () => void;
+  showDemoTools: boolean;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -18,10 +16,8 @@ export const Header: React.FC<HeaderProps> = ({
   users,
   onSelectUser,
   wsConnected,
-  onTriggerDemo,
-  onResetDemo,
-  isTriggering,
-  isResetting,
+  onToggleDemoTools,
+  showDemoTools,
 }) => {
   const getRoleBadgeColor = (role: string) => {
     switch (role) {
@@ -47,10 +43,10 @@ export const Header: React.FC<HeaderProps> = ({
     <header className="app-header">
       <div className="header-left">
         <div className="brand-logo">
-          <Flame className="icon-fire" size={28} />
+          <Flame className="icon-fire" size={26} />
           <div>
             <h1 className="brand-title">Sentinelle Algérie — Tajmaât Ops</h1>
-            <p className="brand-subtitle">Alerte Précoce Feux de Forêt & Mobilisation Communautaire</p>
+            <p className="brand-subtitle">Plateforme d'Alerte Précoce & Mobilisation Communautaire</p>
           </div>
         </div>
       </div>
@@ -58,15 +54,15 @@ export const Header: React.FC<HeaderProps> = ({
       <div className="header-center">
         <div className="ws-status">
           <span className={`ws-dot ${wsConnected ? 'connected' : 'disconnected'}`}></span>
-          <Radio size={15} />
-          <span>{wsConnected ? 'WebSocket Connecté' : 'WebSocket Hors-ligne'}</span>
+          <Radio size={14} />
+          <span>{wsConnected ? 'Temps Réel Connecté' : 'Hors-ligne'}</span>
         </div>
       </div>
 
       <div className="header-right">
         {/* Role Selector */}
         <div className="role-switcher">
-          <span className="role-label">Utilisateur actif :</span>
+          <span className="role-label">Rôle :</span>
           <select
             className="user-select"
             value={currentUser.id}
@@ -86,28 +82,15 @@ export const Header: React.FC<HeaderProps> = ({
           </span>
         </div>
 
-        {/* Demo Controls */}
-        <div className="demo-actions">
-          <button
-            className="btn btn-warning btn-sm"
-            onClick={onTriggerDemo}
-            disabled={isTriggering}
-            title="Simule une détection IA sans microservice Python"
-          >
-            <Zap size={15} />
-            <span>{isTriggering ? 'Envoi...' : 'Simuler Détection'}</span>
-          </button>
-
-          <button
-            className="btn btn-secondary btn-sm"
-            onClick={onResetDemo}
-            disabled={isResetting}
-            title="Réinitialise la base de données à l'état propre"
-          >
-            <RefreshCw size={15} className={isResetting ? 'spin' : ''} />
-            <span>{isResetting ? 'Reset...' : 'Réinitialiser'}</span>
-          </button>
-        </div>
+        {/* Demo Tools Toggle (Unobtrusive) */}
+        <button
+          className={`btn btn-sm ${showDemoTools ? 'btn-primary' : 'btn-secondary'}`}
+          onClick={onToggleDemoTools}
+          title="Ouvrir le panneau d'outils de simulation de test"
+        >
+          <Zap size={14} />
+          <span>{showDemoTools ? 'Masquer Outils Démo' : 'Outils Démo'}</span>
+        </button>
       </div>
     </header>
   );

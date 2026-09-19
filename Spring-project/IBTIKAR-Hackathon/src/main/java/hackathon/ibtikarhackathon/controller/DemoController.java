@@ -18,10 +18,14 @@ public class DemoController {
 
     private final IncidentService incidentService;
     private final DataInitializer dataInitializer;
+    private final hackathon.ibtikarhackathon.websocket.PlainWebSocketHandler webSocketHandler;
 
-    public DemoController(IncidentService incidentService, DataInitializer dataInitializer) {
+    public DemoController(IncidentService incidentService,
+                          DataInitializer dataInitializer,
+                          hackathon.ibtikarhackathon.websocket.PlainWebSocketHandler webSocketHandler) {
         this.incidentService = incidentService;
         this.dataInitializer = dataInitializer;
+        this.webSocketHandler = webSocketHandler;
     }
 
     @PostMapping("/trigger-detection")
@@ -39,6 +43,7 @@ public class DemoController {
     @PostMapping("/reset")
     public ResponseEntity<Map<String, Object>> resetDemo() {
         dataInitializer.reset();
+        webSocketHandler.broadcast("demo_reset", Map.of("message", "reset_completed"));
         return ResponseEntity.ok(Map.of(
                 "status", "success",
                 "message", "Base réinitialisée avec succès aux données d'origine (4 utilisateurs, 1 incident contenu, reboisement à 40%)"

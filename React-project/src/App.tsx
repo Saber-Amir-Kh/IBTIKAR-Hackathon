@@ -23,7 +23,7 @@ import {
   triggerDemoDetection,
   resetDemo,
 } from './api';
-import { Package, TreePine, Map as MapIcon } from 'lucide-react';
+import { Package, TreePine, Map as MapIcon, Zap, X } from 'lucide-react';
 import './App.css';
 
 const DEFAULT_USERS: User[] = [
@@ -48,6 +48,7 @@ export const App: React.FC = () => {
   const [isTriggering, setIsTriggering] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
   const [inspectModalOpen, setInspectModalOpen] = useState(false);
+  const [showDemoTools, setShowDemoTools] = useState(false);
 
   const wsRef = useRef<WebSocket | null>(null);
 
@@ -217,6 +218,11 @@ export const App: React.FC = () => {
         addEvent('REBOISEMENT', `Parcelle mise à jour : ${zone.name} (${zone.treesPlanted}/${zone.targetTrees} arbres)`);
         break;
       }
+      case 'demo_reset': {
+        loadInitialData();
+        addEvent('DEMO', 'La base de données a été réinitialisée avec succès (feux de test supprimés).');
+        break;
+      }
       default:
         console.log('Unhandled WS message:', msg);
     }
@@ -256,38 +262,56 @@ export const App: React.FC = () => {
         users={users}
         onSelectUser={setCurrentUser}
         wsConnected={wsConnected}
-        onTriggerDemo={handleTriggerDemo}
-        onResetDemo={handleResetDemo}
-        isTriggering={isTriggering}
-        isResetting={isResetting}
+        onToggleDemoTools={() => setShowDemoTools((prev) => !prev)}
+        showDemoTools={showDemoTools}
       />
 
-      {/* Incident Quick Selector Bar */}
+      {/* Incident Quick Selector Bar (Clean & Compact) */}
       <div className="incident-selector-bar">
-        <span className="selector-label">Incident sélectionné :</span>
-        <div className="incident-pills">
-          {incidents.map((inc) => (
-            <button
-              key={inc.id}
-              className={`incident-pill ${selectedIncident?.id === inc.id ? 'active' : ''} pill-${inc.status.toLowerCase()}`}
-              onClick={() => {
-                setSelectedIncident(inc);
-                loadIncidentSubData(inc.id);
+        <div className="selector-group">
+          <span className="selector-label">Incident sélectionné :</span>
+          {incidents.length > 0 ? (
+            <select
+              className="incident-dropdown"
+              value={selectedIncident?.id || ''}
+              onChange={(e) => {
+                const inc = incidents.find((i) => i.id === Number(e.target.value));
+                if (inc) {
+                  setSelectedIncident(inc);
+                  loadIncidentSubData(inc.id);
+                }
               }}
             >
-              #{inc.id} [{inc.status}] — {inc.droneId}
-            </button>
-          ))}
+              {incidents.map((inc) => (
+                <option key={inc.id} value={inc.id}>
+                  #{inc.id} [{inc.status}] — {inc.droneId} ({inc.severity})
+                </option>
+              ))}
+            </select>
+          ) : (
+            <span className="text-muted text-sm">Aucun incident enregistré</span>
+          )}
+
+          {selectedIncident && (
+            <span className={`status-badge-compact pill-${selectedIncident.status.toLowerCase()}`}>
+              {selectedIncident.status}
+            </span>
+          )}
         </div>
 
-        {selectedIncident && (
-          <button
-            className="btn btn-outline-primary btn-sm ml-auto"
-            onClick={() => setInspectModalOpen(true)}
-          >
-            Inspecter l'incident #{selectedIncident.id}
-          </button>
-        )}
+        <div className="selector-actions">
+          {selectedIncident && (
+            <button
+              className="btn btn-outline-primary btn-sm"
+              onClick={() => setInspectModalOpen(true)}
+            >
+              Inspecter l'incident #{selectedIncident.id}
+            </button>
+          )}
+          <span className="incidents-total-badge">
+            {incidents.length} incident{incidents.length > 1 ? 's' : ''}
+          </span>
+        </div>
       </div>
 
       {/* Main Workspace Navigation Tabs */}
@@ -395,6 +419,58 @@ export const App: React.FC = () => {
             loadIncidentSubData(updated.id);
           }}
         />
+      )}
+
+      {/* Floating Demo Tools Drawer (Simulation Controls) */}
+      {showDemoTools && (
+        <div className="demo-tools-drawer">
+          <div className="demo-tools-header">
+            <div className="demo-tools-title">
+              <Zap size={18} className="text-warning" />
+              <div>
+                <h4>Simulation & Outils Démo</h4>
+                <p>Tester le système sans saturer l'écran</p>
+              </div>
+            </div>
+            <button
+              className="btn-close-tray"
+              onClick={() => setShowDemoTools(false)}
+              title="Fermer le panneau"
+            >
+              <X size={18} />
+            </button>
+          </div>
+
+          <div className="demo-tools-body">
+            <div className="demo-tool-card">
+              <div className="demo-tool-info">
+                <strong>Simuler un départ de feu (Mock)</strong>
+                <p>Injecte un incident factice pour déclencher l'alerte temps-réel WebSocket.</p>
+              </div>
+              <button
+                className="btn btn-danger btn-sm"
+                onClick={handleTriggerDemo}
+                disabled={isTriggering}
+              >
+                {isTriggering ? 'Simulation en cours...' : '🔥 Simuler Détection Feu'}
+              </button>
+            </div>
+
+            <div className="demo-tool-card">
+              <div className="demo-tool-info">
+                <strong>Nettoyer & Réinitialiser la Démo</strong>
+                <p>Supprime les feux de test et remet la base à l'état propre initial (Tikjda 40%).</p>
+              </div>
+              <button
+                className="btn btn-secondary btn-sm"
+                onClick={handleResetDemo}
+                disabled={isResetting}
+              >
+                {isResetting ? 'Nettoyage...' : '🔄 Remettre à Zéro (Clean)'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
