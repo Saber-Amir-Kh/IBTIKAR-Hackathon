@@ -1,0 +1,20 @@
+# Python Snapshots
+Python/snapshots/*
+!Python/snapshots/.gitkeep
+
+# Python artifacts
+Python/venv/
+Python/.env
+Python/__pycache__/
+Python/*.py[cod]
+Python/*.pt
+Python/runs/
+
+# React artifacts
+React-project/node_modules/
+React-project/dist/
+
+# Spring Boot artifacts & local data
+Spring-project/IBTIKAR-Hackathon/target/
+Spring-project/IBTIKAR-Hackathon/data/
+Spring-project/IBTIKAR-Hackathon/.mvn/wrapper/maven-wrapper.jar

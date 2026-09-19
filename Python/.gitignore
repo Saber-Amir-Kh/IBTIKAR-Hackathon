@@ -1,0 +1,11 @@
+# Ignore all snapshot images (current and future)
+snapshots/*
+!snapshots/.gitkeep
+
+# Environment and virtual environment
+venv/
+.env
+__pycache__/
+*.py[cod]
+yolov8n.pt
+runs/
