@@ -1,5 +1,5 @@
 Set-Location $PSScriptRoot
-Write-Host "Starting Algeria Wildfire AI Microservice on Port 8000..." -ForegroundColor Green
+Write-Host "Starting Algeria Wildfire AI Microservice on Port 8001..." -ForegroundColor Green
 if (-not (Test-Path "venv\Scripts\python.exe")) {
     Write-Host "Creating virtual environment..." -ForegroundColor Yellow
     python -m venv venv
