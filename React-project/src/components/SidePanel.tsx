@@ -10,6 +10,7 @@ interface SidePanelProps {
 export const SidePanel: React.FC<SidePanelProps> = ({ events, onClearEvents }) => {
   const [streamError, setStreamError] = useState(false);
   const [activeTab, setActiveTab] = useState<'video' | 'feed'>('video');
+  const aiPort = (import.meta as any).env?.VITE_AI_PORT || '8000';
 
   return (
     <div className="side-panel">
@@ -19,7 +20,7 @@ export const SidePanel: React.FC<SidePanelProps> = ({ events, onClearEvents }) =
           onClick={() => setActiveTab('video')}
         >
           <Video size={16} />
-          <span>Flux Vidéo Direct (Port 8000)</span>
+          <span>Flux Vidéo Direct (Port {aiPort})</span>
         </button>
         <button
           className={`side-tab ${activeTab === 'feed' ? 'active' : ''}`}
@@ -37,12 +38,12 @@ export const SidePanel: React.FC<SidePanelProps> = ({ events, onClearEvents }) =
               <span className="live-indicator">
                 <span className="live-dot"></span> EN DIRECT
               </span>
-              <span className="stream-source">http://localhost:8000/proxy_feed</span>
+              <span className="stream-source">http://localhost:{aiPort}/proxy_feed</span>
             </div>
 
             {!streamError ? (
               <img
-                src="http://localhost:8000/proxy_feed"
+                src={`http://localhost:${aiPort}/proxy_feed`}
                 alt="Flux Vidéo Drone Surveillance"
                 className="live-video-stream"
                 onError={() => setStreamError(true)}
@@ -52,7 +53,7 @@ export const SidePanel: React.FC<SidePanelProps> = ({ events, onClearEvents }) =
                 <AlertCircle size={40} className="icon-muted" />
                 <h4>Microservice IA Python Déconnecté</h4>
                 <p>
-                  Le flux direct sera actif dès que <code>python main.py</code> est lancé sur le port 8000.
+                  Le flux direct sera actif dès que <code>python main.py</code> est lancé sur le port {aiPort}.
                 </p>
                 <div className="fallback-badge">Simulation Autonome Spring Boot Active</div>
                 <button

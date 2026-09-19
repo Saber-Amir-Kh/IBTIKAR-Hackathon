@@ -39,10 +39,10 @@ export const LiveMap: React.FC<LiveMapProps> = ({
       zoomControl: true,
     });
 
-    // Dark high-contrast / Carto tiles
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-      attribution: '&copy; <a href="https://carto.com/">CARTO</a> & OpenStreetMap',
-      maxZoom: 18,
+    // Clean OpenStreetMap tiles (no API key required)
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap contributors',
+      maxZoom: 19,
     }).addTo(map);
 
     droneLayerRef.current = L.layerGroup().addTo(map);
