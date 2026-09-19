@@ -1,0 +1,96 @@
+import React, { useState } from 'react';
+import { Video, Bell, Radio, AlertCircle } from 'lucide-react';
+import type { EventLogItem } from '../types';
+
+interface SidePanelProps {
+  events: EventLogItem[];
+  onClearEvents: () => void;
+}
+
+export const SidePanel: React.FC<SidePanelProps> = ({ events, onClearEvents }) => {
+  const [streamError, setStreamError] = useState(false);
+  const [activeTab, setActiveTab] = useState<'video' | 'feed'>('video');
+
+  return (
+    <div className="side-panel">
+      <div className="side-tabs">
+        <button
+          className={`side-tab ${activeTab === 'video' ? 'active' : ''}`}
+          onClick={() => setActiveTab('video')}
+        >
+          <Video size={16} />
+          <span>Flux Vidéo Direct (Port 8000)</span>
+        </button>
+        <button
+          className={`side-tab ${activeTab === 'feed' ? 'active' : ''}`}
+          onClick={() => setActiveTab('feed')}
+        >
+          <Bell size={16} />
+          <span>Journal Événements ({events.length})</span>
+        </button>
+      </div>
+
+      <div className="side-content">
+        {activeTab === 'video' ? (
+          <div className="video-container">
+            <div className="video-header">
+              <span className="live-indicator">
+                <span className="live-dot"></span> EN DIRECT
+              </span>
+              <span className="stream-source">http://localhost:8000/proxy_feed</span>
+            </div>
+
+            {!streamError ? (
+              <img
+                src="http://localhost:8000/proxy_feed"
+                alt="Flux Vidéo Drone Surveillance"
+                className="live-video-stream"
+                onError={() => setStreamError(true)}
+              />
+            ) : (
+              <div className="video-fallback">
+                <AlertCircle size={40} className="icon-muted" />
+                <h4>Microservice IA Python Déconnecté</h4>
+                <p>
+                  Le flux direct sera actif dès que <code>python main.py</code> est lancé sur le port 8000.
+                </p>
+                <div className="fallback-badge">Simulation Autonome Spring Boot Active</div>
+                <button
+                  className="btn btn-secondary btn-sm mt-2"
+                  onClick={() => setStreamError(false)}
+                >
+                  <Radio size={14} /> Réessayer la connexion
+                </button>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="event-feed-container">
+            <div className="feed-header">
+              <span>Événements WebSocket en temps réel</span>
+              {events.length > 0 && (
+                <button className="btn-text-sm" onClick={onClearEvents}>
+                  Effacer
+                </button>
+              )}
+            </div>
+
+            <div className="event-list">
+              {events.length === 0 ? (
+                <div className="empty-feed">Aucun événement reçu pour le moment.</div>
+              ) : (
+                events.map((evt) => (
+                  <div key={evt.id} className={`event-card event-${evt.type}`}>
+                    <div className="event-time">{evt.time}</div>
+                    <div className="event-badge">{evt.type}</div>
+                    <div className="event-text">{evt.text}</div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
