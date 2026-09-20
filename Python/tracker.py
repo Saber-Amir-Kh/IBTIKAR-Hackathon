@@ -106,7 +106,7 @@ class SpatialFireTracker:
     Maintains continuity of sustained fire detection across video stutters, flame flickers,
     and camera frame drops for a designated memory window (default: 0.8-1.0s).
     """
-    def __init__(self, sustained_seconds: float = 2.0, memory_grace_seconds: float = 0.8, confidence_threshold: float = 0.70):
+    def __init__(self, sustained_seconds: float = 2.0, memory_grace_seconds: float = 0.8, confidence_threshold: float = 0.52):
         self.sustained_seconds = sustained_seconds
         self.memory_grace_seconds = memory_grace_seconds
         self.confidence_threshold = confidence_threshold
@@ -119,21 +119,21 @@ class SpatialFireTracker:
         """
         Calculates the adaptive continuity threshold used ONLY for keeping already-active
         fire tracks alive when ambient brightness changes (lights ON/OFF).
-        NOTE: New track spawning ALWAYS uses the full base confidence_threshold (0.70)
+        NOTE: New track spawning ALWAYS uses the full base confidence_threshold (0.52)
         to prevent false positives on faces, walls, or backgrounds.
+        Face rejection filter (skin-tone YCrCb+HSV) is the primary false-positive guard.
         """
         if mean_luma is None:
             return self.confidence_threshold
 
         if mean_luma >= 125.0:
-            # High brightness / Chamber light ON:
-            # Only relax continuity (not new-track threshold) down to 0.62
-            return round(max(0.62, self.confidence_threshold - 0.08), 2)
+            # High brightness: relax continuity down to 0.42
+            return round(max(0.42, self.confidence_threshold - 0.10), 2)
         elif mean_luma > 100.0:
-            # Transition region: interpolate smoothly
+            # Transition region
             ratio = (mean_luma - 100.0) / 25.0
-            eff = self.confidence_threshold - (0.06 * ratio)
-            return round(max(0.64, eff), 2)
+            eff = self.confidence_threshold - (0.07 * ratio)
+            return round(max(0.44, eff), 2)
         else:
             return self.confidence_threshold
 

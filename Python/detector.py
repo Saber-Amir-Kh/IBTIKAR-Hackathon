@@ -361,7 +361,7 @@ class CompositeFireDetector(BaseDetector):
 
     def detect(self, frame: np.ndarray) -> List[Dict[str, Any]]:
         if self.yolo.is_loaded and self.yolo.has_fire_classes:
-            raw = self.yolo.detect(frame, conf_threshold=0.28)
+            raw = self.yolo.detect(frame, conf_threshold=0.18)
             return self.face_filter.filter(raw, frame)
 
         if self.heuristic:
