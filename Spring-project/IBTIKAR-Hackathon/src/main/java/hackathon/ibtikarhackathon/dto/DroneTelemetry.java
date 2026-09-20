@@ -18,4 +18,6 @@ public class DroneTelemetry {
     private Double battery;
     private Double heading;
     private String status;
+    private String sector;
+    private String model;
 }

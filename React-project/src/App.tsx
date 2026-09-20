@@ -7,6 +7,7 @@ import { IncidentDetailsModal } from './components/IncidentDetailsModal';
 import { MutualAidBoard } from './components/MutualAidBoard';
 import { ReforestationPanel } from './components/ReforestationPanel';
 import { FireManagementPanel } from './components/FireManagementPanel';
+import { DroneManagementPanel } from './components/DroneManagementPanel';
 import type {
   User,
   Incident,
@@ -26,6 +27,10 @@ import {
   deleteIncident,
   triggerDemoDetection,
   resetDemo,
+  sendDroneCommand,
+  recallAllDrones,
+  resumeAllDrones,
+  deployDrone,
 } from './api';
 import { LandingPage } from './components/LandingPage';
 import './App.css';
@@ -61,7 +66,7 @@ export const App: React.FC = () => {
   const [selectedZone, setSelectedZone] = useState<PlantingZone | null>(null);
   const [events, setEvents] = useState<EventLogItem[]>([]);
   const [wsConnected, setWsConnected] = useState(false);
-  const [activeViewTab, setActiveViewTab] = useState<'map' | 'incident' | 'aid' | 'reforest' | 'fires'>('map');
+  const [activeViewTab, setActiveViewTab] = useState<'map' | 'incident' | 'aid' | 'reforest' | 'fires' | 'drones'>('map');
   const [mapFilter, setMapFilter] = useState<'ALL' | 'ACTIVE_ONLY'>(() => {
     return (localStorage.getItem('sentinelle_map_filter') as 'ALL' | 'ACTIVE_ONLY') || 'ALL';
   });
@@ -359,6 +364,61 @@ export const App: React.FC = () => {
     addEvent('NETTOYAGE', `${dismissed.length} alertes rejetées supprimées définitivement.`);
   };
 
+  // Drone Fleet Management Handlers
+  const handleSendDroneCommand = async (droneId: string, command: string, params?: Record<string, any>) => {
+    try {
+      await sendDroneCommand(droneId, command, params);
+      setDrones((prev) =>
+        prev.map((d) => {
+          if (d.droneId !== droneId) return d;
+          let nextStatus = d.status;
+          let nextBattery = d.battery;
+          if (command === 'HOVER' || command === 'SCAN') nextStatus = 'HOVER_SCAN';
+          else if (command === 'RESUME_PATROL' || command === 'PATROL') nextStatus = 'PATROL_ACTIVE';
+          else if (command === 'RETURN_TO_HOME' || command === 'RTH') nextStatus = 'RETURN_TO_HOME';
+          else if (command === 'RECHARGE') {
+            nextStatus = 'PATROL_ACTIVE';
+            nextBattery = 100.0;
+          }
+          return { ...d, status: nextStatus, battery: nextBattery };
+        })
+      );
+      addEvent('DRONE', `Ordre "${command}" exécuté pour ${droneId}.`);
+    } catch (err: any) {
+      alert('Erreur commande drone : ' + err.message);
+    }
+  };
+
+  const handleRecallAllDrones = async () => {
+    try {
+      await recallAllDrones();
+      setDrones((prev) => prev.map((d) => ({ ...d, status: 'RETURN_TO_HOME' })));
+      addEvent('DRONE', 'Ordre RTH Global : toute la flotte regagne sa base de décollage.');
+    } catch (err: any) {
+      alert('Erreur rappel flotte : ' + err.message);
+    }
+  };
+
+  const handleResumeAllDrones = async () => {
+    try {
+      await resumeAllDrones();
+      setDrones((prev) => prev.map((d) => ({ ...d, status: 'PATROL_ACTIVE' })));
+      addEvent('DRONE', 'Reprise des patrouilles de surveillance sur l\'ensemble des massifs.');
+    } catch (err: any) {
+      alert('Erreur reprise patrouille : ' + err.message);
+    }
+  };
+
+  const handleDeployDrone = async (data: { name: string; sector: string; lat: number; lon: number; altitude?: number }) => {
+    try {
+      const created = await deployDrone(data);
+      setDrones((prev) => [...prev, created]);
+      addEvent('DRONE', `Nouveau drone déployé : ${created.name} (${created.droneId}) sur ${data.sector}.`);
+    } catch (err: any) {
+      alert('Erreur déploiement drone : ' + err.message);
+    }
+  };
+
   // Demo Actions
   const handleTriggerDemo = async () => {
     try {
@@ -398,11 +458,12 @@ export const App: React.FC = () => {
     <div className="tactical-shell">
       {/* 1. Tactical Left Sidebar */}
       <Sidebar
-        activeTab={activeViewTab === 'map' ? 'map' : activeViewTab === 'aid' ? 'aid' : activeViewTab === 'fires' ? 'fires' : 'reforest'}
+        activeTab={activeViewTab === 'map' ? 'map' : activeViewTab === 'aid' ? 'aid' : activeViewTab === 'fires' ? 'fires' : activeViewTab === 'drones' ? 'drones' : 'reforest'}
         onSelectTab={(tab) => setActiveViewTab(tab)}
         needsCount={needs.length}
         zonesCount={zones.length}
         firesCount={incidents.length}
+        dronesCount={drones.length}
         showDemoTools={showDemoTools}
         onToggleDemoTools={() => setShowDemoTools((prev) => !prev)}
         onBackToLanding={() => navigateTo('landing')}
@@ -510,6 +571,24 @@ export const App: React.FC = () => {
                 onToggleMapFilter={handleToggleMapFilter}
                 onClearDismissed={handleClearDismissed}
                 onNavigateToMap={() => setActiveViewTab('map')}
+              />
+            </div>
+          )}
+
+          {activeViewTab === 'drones' && (
+            <div className="subview-layout">
+              <DroneManagementPanel
+                drones={drones}
+                onSendCommand={handleSendDroneCommand}
+                onRecallAll={handleRecallAllDrones}
+                onResumeAll={handleResumeAllDrones}
+                onDeployDrone={handleDeployDrone}
+                onNavigateToMapWithDrone={(_d) => {
+                  setActiveViewTab('map');
+                }}
+                onNavigateToFeed={() => {
+                  setActiveViewTab('map');
+                }}
               />
             </div>
           )}

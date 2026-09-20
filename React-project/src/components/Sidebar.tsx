@@ -1,5 +1,5 @@
 import React from 'react';
-import { Flame } from 'lucide-react';
+import { Flame, Radio } from 'lucide-react';
 import {
   RadarScopeIcon,
   TouizaReliefIcon,
@@ -9,11 +9,12 @@ import {
 } from './TacticalIcons';
 
 interface SidebarProps {
-  activeTab: 'map' | 'aid' | 'reforest' | 'fires';
-  onSelectTab: (tab: 'map' | 'aid' | 'reforest' | 'fires') => void;
+  activeTab: 'map' | 'aid' | 'reforest' | 'fires' | 'drones';
+  onSelectTab: (tab: 'map' | 'aid' | 'reforest' | 'fires' | 'drones') => void;
   needsCount: number;
   zonesCount: number;
   firesCount?: number;
+  dronesCount?: number;
   showDemoTools: boolean;
   onToggleDemoTools: () => void;
   onBackToLanding: () => void;
@@ -40,6 +41,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   needsCount,
   zonesCount,
   firesCount = 0,
+  dronesCount = 0,
   showDemoTools,
   onToggleDemoTools,
   onBackToLanding,
@@ -78,6 +80,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </div>
           <span className="btn-label">Gestion Feux</span>
           {firesCount > 0 && <span className="nav-badge danger">{firesCount}</span>}
+        </button>
+
+        <button
+          className={`sidebar-nav-btn ${activeTab === 'drones' ? 'active' : ''}`}
+          onClick={() => onSelectTab('drones')}
+          title="Supervision & Pilotage de la Flotte Drones"
+        >
+          <div className="sidebar-icon-box">
+            <Radio size={18} />
+          </div>
+          <span className="btn-label">Flotte Drones</span>
+          {dronesCount > 0 && <span className="nav-badge cyan">{dronesCount}</span>}
         </button>
 
         <button

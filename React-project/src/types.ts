@@ -69,6 +69,8 @@ export interface DroneTelemetry {
   battery: number;
   heading: number;
   status: string;
+  sector?: string;
+  model?: string;
 }
 
 export interface AlertResponse {

@@ -2703,3 +2703,647 @@ body {
   border-color: #ef4444;
   color: #fff;
 }
+
+/* ==========================================================================
+   DRONE FLEET MANAGEMENT & TELEMETRY WORKSPACE
+   ========================================================================== */
+
+.nav-badge.cyan {
+  background: rgba(6, 182, 212, 0.22);
+  color: #38bdf8;
+  border: 1px solid rgba(6, 182, 212, 0.45);
+}
+
+.drone-management-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow-y: auto;
+  padding: 24px 28px;
+  background: radial-gradient(circle at 10% 15%, rgba(6, 182, 212, 0.05) 0%, transparent 45%),
+              radial-gradient(circle at 90% 85%, rgba(59, 130, 246, 0.04) 0%, transparent 40%),
+              var(--bg-main, #0f1117);
+  gap: 20px;
+}
+
+.drone-mgmt-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--border-color, rgba(255, 255, 255, 0.08));
+}
+
+.drone-mgmt-title-block {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.drone-title-icon-box {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background: rgba(6, 182, 212, 0.12);
+  border: 1px solid rgba(6, 182, 212, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #38bdf8;
+  flex-shrink: 0;
+}
+
+.drone-mgmt-title-block h3 {
+  font-size: 20px;
+  font-weight: 700;
+  color: #fff;
+  margin: 0 0 4px 0;
+}
+
+.drone-mgmt-title-block p {
+  font-size: 13px;
+  color: var(--text-muted, #94a3b8);
+  margin: 0;
+  max-width: 650px;
+}
+
+/* Global Fleet Actions */
+.fleet-global-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.btn-fleet-act {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-fleet-act.recall {
+  background: rgba(59, 130, 246, 0.12);
+  border: 1px solid rgba(59, 130, 246, 0.35);
+  color: #93c5fd;
+}
+
+.btn-fleet-act.recall:hover {
+  background: rgba(59, 130, 246, 0.25);
+  border-color: #60a5fa;
+  color: #fff;
+}
+
+.btn-fleet-act.resume {
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  color: #6ee7b7;
+}
+
+.btn-fleet-act.resume:hover {
+  background: rgba(16, 185, 129, 0.25);
+  border-color: #34d399;
+  color: #fff;
+}
+
+.btn-fleet-act.deploy {
+  background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+  border: 1px solid #38bdf8;
+  color: #fff;
+  box-shadow: 0 0 12px rgba(2, 132, 199, 0.35);
+}
+
+.btn-fleet-act.deploy:hover {
+  background: linear-gradient(135deg, #0369a1 0%, #075985 100%);
+  border-color: #7dd3fc;
+  transform: translateY(-1px);
+}
+
+/* Drone KPI Grid */
+.drone-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+}
+
+.drone-kpi-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.08));
+  border-radius: 10px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.drone-kpi-card:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.2);
+  transform: translateY(-1px);
+}
+
+.drone-kpi-card.active-filter {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: #38bdf8;
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.25);
+}
+
+.drone-kpi-card .kpi-num {
+  font-size: 24px;
+  font-weight: 800;
+  color: #fff;
+}
+
+.drone-kpi-card .kpi-label {
+  font-size: 11px;
+  color: var(--text-muted, #94a3b8);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+}
+
+.drone-kpi-card.green .kpi-num { color: #34d399; }
+.drone-kpi-card.green.active-filter { border-color: #10b981; }
+
+.drone-kpi-card.amber .kpi-num { color: #fbbf24; }
+.drone-kpi-card.amber.active-filter { border-color: #f59e0b; }
+
+.drone-kpi-card.blue .kpi-num { color: #60a5fa; }
+.drone-kpi-card.blue.active-filter { border-color: #3b82f6; }
+
+.drone-kpi-card.cyan .kpi-num { color: #38bdf8; }
+
+/* Filters Bar */
+.drone-filters-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.drone-search-wrap {
+  position: relative;
+  flex: 1;
+  max-width: 480px;
+  min-width: 260px;
+  display: flex;
+  align-items: center;
+}
+
+.drone-search-input {
+  width: 100%;
+  padding: 9px 34px 9px 36px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.12));
+  border-radius: 8px;
+  color: #fff;
+  font-size: 13px;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.drone-search-input:focus {
+  border-color: #38bdf8;
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.fleet-telemetry-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  background: rgba(6, 182, 212, 0.08);
+  border: 1px solid rgba(6, 182, 212, 0.25);
+  border-radius: 6px;
+  font-size: 11.5px;
+  color: #7dd3fc;
+}
+
+.telemetry-live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #38bdf8;
+  animation: pulse-cyan 1.5s infinite;
+}
+
+@keyframes pulse-cyan {
+  0% { transform: scale(0.9); box-shadow: 0 0 0 0 rgba(56, 189, 248, 0.7); }
+  70% { transform: scale(1.1); box-shadow: 0 0 0 6px rgba(56, 189, 248, 0); }
+  100% { transform: scale(0.9); box-shadow: 0 0 0 0 rgba(56, 189, 248, 0); }
+}
+
+/* Drone Card Grid */
+.drone-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+  gap: 16px;
+}
+
+.empty-drones-box {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px dashed var(--border-color, rgba(255, 255, 255, 0.15));
+  border-radius: 12px;
+  text-align: center;
+}
+
+.empty-drones-box h4 {
+  font-size: 16px;
+  color: #e2e8f0;
+  margin: 10px 0 4px 0;
+}
+
+.empty-drones-box p {
+  font-size: 13px;
+  color: var(--text-muted, #94a3b8);
+}
+
+.drone-item-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.drone-item-card:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.2);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
+}
+
+.drone-item-card.border-patrol_active {
+  border-left: 4px solid #10b981;
+}
+
+.drone-item-card.border-hover_scan {
+  border-left: 4px solid #f59e0b;
+}
+
+.drone-item-card.border-return_to_home {
+  border-left: 4px solid #3b82f6;
+}
+
+.drone-item-card.border-charging {
+  border-left: 4px solid #06b6d4;
+}
+
+.drone-item-card.border-standby {
+  border-left: 4px solid #64748b;
+}
+
+/* Drone Card Header */
+.drone-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.drone-id-block {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.drone-rotor-icon {
+  position: relative;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: rgba(6, 182, 212, 0.12);
+  border: 1px solid rgba(6, 182, 212, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #38bdf8;
+  flex-shrink: 0;
+}
+
+.drone-name-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.drone-id-tag {
+  font-size: 15px;
+  font-weight: 700;
+  color: #fff;
+  font-family: var(--font-mono, monospace);
+}
+
+.drone-fullname {
+  font-size: 12px;
+  color: var(--text-muted, #94a3b8);
+}
+
+.drone-status-pill {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.pill-active {
+  background: rgba(16, 185, 129, 0.18);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.4);
+}
+
+.pill-hover {
+  background: rgba(245, 158, 11, 0.18);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.4);
+}
+
+.pill-rth {
+  background: rgba(59, 130, 246, 0.18);
+  color: #60a5fa;
+  border: 1px solid rgba(59, 130, 246, 0.4);
+}
+
+.pill-charging {
+  background: rgba(6, 182, 212, 0.18);
+  color: #38bdf8;
+  border: 1px solid rgba(6, 182, 212, 0.4);
+}
+
+.pill-standby {
+  background: rgba(100, 116, 139, 0.18);
+  color: #94a3b8;
+  border: 1px solid rgba(100, 116, 139, 0.4);
+}
+
+.drone-model-tag {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: #cbd5e1;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 3px 8px;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Gauges */
+.drone-gauges-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.gauge-item {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.gauge-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--text-muted, #94a3b8);
+}
+
+.gauge-label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.gauge-progress-bar {
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.06);
+  overflow: hidden;
+}
+
+.gauge-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.4s ease;
+}
+
+.bg-red { background: #ef4444; }
+.bg-amber { background: #f59e0b; }
+.bg-green { background: #10b981; }
+.bg-cyan { background: #06b6d4; }
+
+/* Metrics */
+.drone-metrics-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.06));
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+.metric-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.metric-cell.col-span-2 {
+  grid-column: span 2;
+}
+
+.m-label {
+  font-size: 10.5px;
+  color: var(--text-muted, #94a3b8);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.m-value {
+  font-size: 12px;
+  color: #fff;
+}
+
+/* Sector */
+.drone-sector-box {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 10px;
+  background: rgba(220, 38, 38, 0.04);
+  border: 1px solid rgba(220, 38, 38, 0.15);
+  border-radius: 8px;
+}
+
+.sector-header {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10.5px;
+  color: var(--text-muted, #94a3b8);
+  text-transform: uppercase;
+}
+
+.sector-name {
+  font-size: 12px;
+  color: #e2e8f0;
+}
+
+/* Actions Toolbar */
+.drone-actions-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-color, rgba(255, 255, 255, 0.06));
+  flex-wrap: wrap;
+}
+
+.btn-drone-act {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
+  color: #cbd5e1;
+  transition: all 0.2s ease;
+}
+
+.btn-drone-act:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+
+.btn-drone-act.resume {
+  background: rgba(16, 185, 129, 0.12);
+  border-color: rgba(16, 185, 129, 0.3);
+  color: #34d399;
+}
+
+.btn-drone-act.resume:hover {
+  background: rgba(16, 185, 129, 0.25);
+  color: #fff;
+}
+
+.btn-drone-act.hover {
+  background: rgba(245, 158, 11, 0.12);
+  border-color: rgba(245, 158, 11, 0.3);
+  color: #fbbf24;
+}
+
+.btn-drone-act.hover:hover {
+  background: rgba(245, 158, 11, 0.25);
+  color: #fff;
+}
+
+.btn-drone-act.rth {
+  background: rgba(59, 130, 246, 0.12);
+  border-color: rgba(59, 130, 246, 0.3);
+  color: #60a5fa;
+}
+
+.btn-drone-act.rth:hover {
+  background: rgba(59, 130, 246, 0.25);
+  color: #fff;
+}
+
+.btn-drone-act.rth.active-rth {
+  background: rgba(59, 130, 246, 0.35);
+  border-color: #3b82f6;
+  color: #fff;
+}
+
+.btn-drone-act.recharge {
+  background: rgba(6, 182, 212, 0.12);
+  border-color: rgba(6, 182, 212, 0.3);
+  color: #38bdf8;
+}
+
+.btn-drone-act.recharge:hover {
+  background: rgba(6, 182, 212, 0.25);
+  color: #fff;
+}
+
+.btn-drone-act.locate {
+  background: rgba(255, 255, 255, 0.05);
+  color: #cbd5e1;
+}
+
+.btn-drone-act.locate:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+
+.btn-drone-act.video {
+  background: rgba(220, 38, 38, 0.12);
+  border-color: rgba(220, 38, 38, 0.3);
+  color: #fca5a5;
+  margin-left: auto;
+}
+
+.btn-drone-act.video:hover {
+  background: rgba(220, 38, 38, 0.25);
+  color: #fff;
+}
+
+/* Deploy Modal */
+.deploy-drone-modal {
+  max-width: 520px;
+  width: 90%;
+  background: #141620;
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.12));
+  border-radius: 12px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+}
+
+.deploy-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px 20px;
+}
+
+.form-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.btn-cyan {
+  background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%) !important;
+  color: #fff !important;
+  border: 1px solid #38bdf8 !important;
+}
+
+.btn-cyan:hover {
+  background: linear-gradient(135deg, #0369a1 0%, #075985 100%) !important;
+}
+

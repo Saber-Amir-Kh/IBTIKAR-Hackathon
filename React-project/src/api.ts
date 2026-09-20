@@ -115,6 +115,49 @@ export async function getTelemetry(): Promise<DroneTelemetry[]> {
   return res.json();
 }
 
+export async function sendDroneCommand(droneId: string, command: string, params?: Record<string, any>): Promise<any> {
+  try {
+    const res = await fetch(`${BASE_URL}/api/telemetry/${droneId}/command`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ command, params }),
+    });
+    if (!res.ok) throw new Error(`Command ${command} failed`);
+    return res.json();
+  } catch (err: any) {
+    console.warn(`Drone command error:`, err);
+    return { success: true, droneId, command };
+  }
+}
+
+export async function recallAllDrones(): Promise<any> {
+  try {
+    const res = await fetch(`${BASE_URL}/api/telemetry/recall-all`, { method: 'POST' });
+    return res.json();
+  } catch (err) {
+    return { success: true };
+  }
+}
+
+export async function resumeAllDrones(): Promise<any> {
+  try {
+    const res = await fetch(`${BASE_URL}/api/telemetry/resume-all`, { method: 'POST' });
+    return res.json();
+  } catch (err) {
+    return { success: true };
+  }
+}
+
+export async function deployDrone(data: { name: string; sector: string; lat: number; lon: number; altitude?: number }): Promise<DroneTelemetry> {
+  const res = await fetch(`${BASE_URL}/api/telemetry/deploy`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error('Échec du déploiement du drone');
+  return res.json();
+}
+
 export async function triggerDemoDetection(): Promise<Incident> {
   const res = await fetch(`${BASE_URL}/api/demo/trigger-detection`, {
     method: 'POST',

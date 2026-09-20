@@ -137,9 +137,10 @@ export const LiveMap: React.FC<LiveMapProps> = ({
       const marker = L.marker([d.lat, d.lon], { icon: droneIcon });
       marker.bindTooltip(`
         <strong>${d.name} (${d.droneId})</strong><br/>
+        ${d.sector ? `<em>${d.sector}</em><br/>` : ''}
         GPS: ${d.lat.toFixed(4)}°N, ${d.lon.toFixed(4)}°E<br/>
-        Cap: ${d.heading}° | Alt: ${d.altitude}m<br/>
-        Batterie: ${d.battery}% [${d.status}]
+        Cap: ${d.heading.toFixed(0)}° | Alt: ${d.altitude.toFixed(0)}m<br/>
+        Batterie: ${Math.round(d.battery)}% [${d.status}]
       `);
       droneLayerRef.current?.addLayer(marker);
     });
