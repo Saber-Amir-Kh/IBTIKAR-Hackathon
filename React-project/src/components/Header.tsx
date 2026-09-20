@@ -9,6 +9,7 @@ interface HeaderProps {
   wsConnected: boolean;
   onToggleDemoTools: () => void;
   showDemoTools: boolean;
+  onBackToLanding?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -18,6 +19,7 @@ export const Header: React.FC<HeaderProps> = ({
   wsConnected,
   onToggleDemoTools,
   showDemoTools,
+  onBackToLanding,
 }) => {
   const getRoleBadgeColor = (role: string) => {
     switch (role) {
@@ -91,6 +93,17 @@ export const Header: React.FC<HeaderProps> = ({
           <Zap size={14} />
           <span>{showDemoTools ? 'Masquer Outils Démo' : 'Outils Démo'}</span>
         </button>
+
+        {/* Return to Showcase / Landing Page */}
+        {onBackToLanding && (
+          <button
+            className="btn btn-sm btn-outline-secondary"
+            onClick={onBackToLanding}
+            title="Retourner sur la page de présentation (Landing Page)"
+          >
+            <span>Accueil Vitrine</span>
+          </button>
+        )}
       </div>
     </header>
   );

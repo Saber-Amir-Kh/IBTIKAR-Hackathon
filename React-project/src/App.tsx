@@ -24,6 +24,7 @@ import {
   resetDemo,
 } from './api';
 import { Package, TreePine, Map as MapIcon, Zap, X } from 'lucide-react';
+import { LandingPage } from './components/LandingPage';
 import './App.css';
 
 const DEFAULT_USERS: User[] = [
@@ -49,6 +50,7 @@ export const App: React.FC = () => {
   const [isResetting, setIsResetting] = useState(false);
   const [inspectModalOpen, setInspectModalOpen] = useState(false);
   const [showDemoTools, setShowDemoTools] = useState(false);
+  const [currentView, setCurrentView] = useState<'landing' | 'dashboard'>('landing');
 
   const wsRef = useRef<WebSocket | null>(null);
 
@@ -255,6 +257,10 @@ export const App: React.FC = () => {
     }
   };
 
+  if (currentView === 'landing') {
+    return <LandingPage onEnterPlatform={() => setCurrentView('dashboard')} />;
+  }
+
   return (
     <div className="app-container">
       <Header
@@ -264,6 +270,7 @@ export const App: React.FC = () => {
         wsConnected={wsConnected}
         onToggleDemoTools={() => setShowDemoTools((prev) => !prev)}
         showDemoTools={showDemoTools}
+        onBackToLanding={() => setCurrentView('landing')}
       />
 
       {/* Incident Quick Selector Bar (Clean & Compact) */}
