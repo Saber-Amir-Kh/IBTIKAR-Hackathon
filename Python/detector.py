@@ -230,14 +230,127 @@ class YOLOv8FireDetector(BaseDetector):
             print(f"[YOLO] Detection error: {e}")
             return []
 
+class FaceRejectionFilter:
+    """
+    Suppresses smoke/fire detections that actually contain human skin tones.
+    Works on cv2 5.0+ without any external model files.
+
+    Strategy:
+    - Convert the detection crop to YCrCb and HSV color spaces
+    - Count pixels that fall within human skin-tone ranges
+    - If >25% of the crop is skin-colored AND the region is in the upper half of
+      frame (where a person's head/hair typically appears), reject the detection
+    - Also reject "smoke" detections with a near-square/portrait aspect ratio in the
+      upper portion of frame — characteristic of a face or head region
+    """
+
+    # YCrCb skin ranges (standard face detector range)
+    YCRCB_CR_MIN, YCRCB_CR_MAX = 133, 173
+    YCRCB_CB_MIN, YCRCB_CB_MAX = 77,  127
+
+    # HSV skin ranges (for olive/brown/tanned skin and hair highlights)
+    HSV_LOWER = np.array([0,   20, 70],  dtype=np.uint8)
+    HSV_UPPER = np.array([25, 255, 255], dtype=np.uint8)
+    HSV_LOWER2 = np.array([165, 20, 70],  dtype=np.uint8)
+    HSV_UPPER2 = np.array([180, 255, 255], dtype=np.uint8)
+
+    def __init__(self):
+        print("[FaceFilter] Skin-tone face rejection filter ACTIVE (cv2 5.0 compatible).")
+
+    def _skin_pixel_ratio(self, crop: np.ndarray) -> float:
+        """Return fraction of pixels in crop that match skin-tone in YCrCb + HSV."""
+        if crop is None or crop.size == 0:
+            return 0.0
+        h, w = crop.shape[:2]
+        total = max(1, h * w)
+
+        # YCrCb mask
+        ycrcb = cv2.cvtColor(crop, cv2.COLOR_BGR2YCrCb)
+        cr = ycrcb[:, :, 1]
+        cb = ycrcb[:, :, 2]
+        skin_ycrcb = (
+            (cr >= self.YCRCB_CR_MIN) & (cr <= self.YCRCB_CR_MAX) &
+            (cb >= self.YCRCB_CB_MIN) & (cb <= self.YCRCB_CB_MAX)
+        )
+
+        # HSV mask (catches warm skin highlights)
+        hsv = cv2.cvtColor(crop, cv2.COLOR_BGR2HSV)
+        mask_h1 = cv2.inRange(hsv, self.HSV_LOWER, self.HSV_UPPER)
+        mask_h2 = cv2.inRange(hsv, self.HSV_LOWER2, self.HSV_UPPER2)
+        skin_hsv = (mask_h1 | mask_h2).astype(bool)
+
+        combined = skin_ycrcb | skin_hsv
+        return float(np.sum(combined)) / total
+
+    def is_likely_face_region(self, det_box: list, frame: np.ndarray, label: str) -> bool:
+        """
+        Returns True if this detection is likely a false positive on a human face/head.
+        Uses multiple criteria:
+        1. High skin-pixel ratio in the crop
+        2. Crop is in the upper 60% of the frame (head position)
+        3. Near-square or portrait-shaped bounding box (face shape)
+        4. Label is 'smoke' (not 'fire' — real fire rarely produces skin tones)
+        """
+        if frame is None:
+            return False
+        x1, y1, x2, y2 = [int(v) for v in det_box]
+        frame_h, frame_w = frame.shape[:2]
+
+        # Only check "smoke" — fire has distinctive orange/red chrominance
+        if label.lower() != "smoke":
+            return False
+
+        # Only filter in upper 70% of the frame — head/body area
+        box_center_y = (y1 + y2) / 2.0
+        if box_center_y > frame_h * 0.70:
+            return False
+
+        # Crop the detection region (clamp to frame bounds)
+        cx1 = max(0, x1)
+        cy1 = max(0, y1)
+        cx2 = min(frame_w, x2)
+        cy2 = min(frame_h, y2)
+        crop = frame[cy1:cy2, cx1:cx2]
+        if crop.size == 0:
+            return False
+
+        # Check skin pixel ratio
+        skin_ratio = self._skin_pixel_ratio(crop)
+        if skin_ratio >= 0.22:
+            return True
+
+        # Secondary check: near-square bounding box in upper frame at moderate skin ratio
+        # (face/head can have hair reducing skin ratio but box is still portrait)
+        box_w = x2 - x1
+        box_h = y2 - y1
+        aspect = box_h / max(1, box_w)  # portrait = > 0.8
+        if 0.7 <= aspect <= 2.5 and skin_ratio >= 0.12 and box_center_y < frame_h * 0.45:
+            return True
+
+        return False
+
+    def filter(self, detections: list, frame: np.ndarray) -> list:
+        """Remove detections likely matching a human face/head region."""
+        if not detections or frame is None:
+            return detections
+        kept = []
+        for det in detections:
+            if self.is_likely_face_region(det["box"], frame, det.get("label", "")):
+                print(f"[FaceFilter] Suppressed {det['label']} ({det['confidence']*100:.0f}%) — skin-tone overlap detected.")
+            else:
+                kept.append(det)
+        return kept
+
+
 class CompositeFireDetector(BaseDetector):
     """
     Main detection pipeline:
     - Exclusively utilizes dedicated fine-tuned YOLO model when present.
-    - Zero hallucination on faces, hands, clothes, or indoor furniture.
+    - Applies face rejection filter to suppress false positives on human faces/hair.
     """
     def __init__(self, yolo_model_path: str = "fire_yolov8n.pt"):
         self.yolo = YOLOv8FireDetector(yolo_model_path)
+        self.face_filter = FaceRejectionFilter()
         # Only instantiate heuristic if neural network has no fire classes
         if self.yolo.is_loaded and self.yolo.has_fire_classes:
             self.heuristic = None
@@ -248,9 +361,11 @@ class CompositeFireDetector(BaseDetector):
 
     def detect(self, frame: np.ndarray) -> List[Dict[str, Any]]:
         if self.yolo.is_loaded and self.yolo.has_fire_classes:
-            return self.yolo.detect(frame, conf_threshold=0.28)
+            raw = self.yolo.detect(frame, conf_threshold=0.28)
+            return self.face_filter.filter(raw, frame)
 
         if self.heuristic:
-            return self.heuristic.detect(frame)
+            raw = self.heuristic.detect(frame)
+            return self.face_filter.filter(raw, frame)
 
         return []

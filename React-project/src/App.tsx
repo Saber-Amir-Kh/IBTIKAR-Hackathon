@@ -570,7 +570,13 @@ export const App: React.FC = () => {
                 mapFilter={mapFilter}
                 onToggleMapFilter={handleToggleMapFilter}
                 onClearDismissed={handleClearDismissed}
-                onNavigateToMap={() => setActiveViewTab('map')}
+                onNavigateToMap={(inc) => {
+                  if (inc) {
+                    setSelectedIncident({ ...inc });
+                    loadIncidentSubData(inc.id);
+                  }
+                  setActiveViewTab('map');
+                }}
               />
             </div>
           )}

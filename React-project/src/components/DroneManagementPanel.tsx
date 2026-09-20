@@ -268,7 +268,7 @@ export const DroneManagementPanel: React.FC<DroneManagementPanelProps> = ({
             }
 
             return (
-              <div key={d.droneId} className={`drone-item-card border-${d.status.toLowerCase()}`}>
+              <div key={d.droneId} className="drone-item-card">
                 {/* Drone Card Header */}
                 <div className="drone-card-header">
                   <div className="drone-id-block">

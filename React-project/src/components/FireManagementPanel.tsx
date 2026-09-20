@@ -26,7 +26,7 @@ interface FireManagementPanelProps {
   mapFilter: 'ALL' | 'ACTIVE_ONLY';
   onToggleMapFilter: (filter: 'ALL' | 'ACTIVE_ONLY') => void;
   onClearDismissed: () => void;
-  onNavigateToMap?: () => void;
+  onNavigateToMap?: (incident?: Incident) => void;
 }
 
 const TEAMS = [
@@ -236,7 +236,7 @@ export const FireManagementPanel: React.FC<FireManagementPanelProps> = ({
             return (
               <div
                 key={inc.id}
-                className={`fire-item-card ${isSelected ? 'fire-card-selected' : ''} status-border-${inc.status.toLowerCase()}`}
+                className={`fire-item-card ${isSelected ? 'fire-card-selected' : ''}`}
               >
                 {/* Fire Image & Meta Top */}
                 <div className="fire-item-header">
@@ -303,52 +303,62 @@ export const FireManagementPanel: React.FC<FireManagementPanelProps> = ({
 
                 {/* Actions Toolbar */}
                 <div className="fire-card-actions">
-                  <div className="actions-left">
-                    <button
-                      className="btn-card-action inspect-action"
-                      onClick={() => onInspectIncident(inc)}
-                      title="Inspecter la fiche complète et les alertes Tajmaât"
-                    >
-                      <Eye size={14} />
-                      <span>Inspecter</span>
-                    </button>
+                  <button
+                    type="button"
+                    className="btn-card-action inspect-action"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onInspectIncident(inc);
+                    }}
+                    title="Inspecter la fiche complète et les alertes Tajmaât"
+                  >
+                    <Eye size={14} />
+                    <span>Inspecter</span>
+                  </button>
 
+                  <button
+                    type="button"
+                    className="btn-card-action locate-action"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onSelectIncident(inc);
+                      onNavigateToMap?.(inc);
+                    }}
+                    title="Localiser et zoomer sur la carte"
+                  >
+                    <Crosshair size={14} />
+                    <span>Carte</span>
+                  </button>
+
+                  {/* Keep / Confirm fire */}
+                  {inc.status === 'PENDING_VERIFICATION' && (
                     <button
-                      className="btn-card-action locate-action"
-                      onClick={() => {
-                        onSelectIncident(inc);
-                        onNavigateToMap?.();
+                      type="button"
+                      className="btn-card-action keep-action"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onKeepIncident(inc);
                       }}
-                      title="Localiser et zoomer sur la carte"
+                      title="Confirmer cet incendie comme feu actif"
                     >
-                      <Crosshair size={14} />
-                      <span>Carte</span>
+                      <CheckCircle2 size={14} />
+                      <span>Confirmer</span>
                     </button>
-                  </div>
+                  )}
 
-                  <div className="actions-right">
-                    {/* Keep / Confirm fire */}
-                    {inc.status === 'PENDING_VERIFICATION' && (
-                      <button
-                        className="btn-card-action keep-action"
-                        onClick={() => onKeepIncident(inc)}
-                        title="Garder ce feu et le confirmer comme actif"
-                      >
-                        <CheckCircle2 size={14} />
-                        <span>Garder / Confirmer</span>
-                      </button>
-                    )}
-
-                    {/* Delete fire (Removes from map to prevent saturation) */}
-                    <button
-                      className="btn-card-action delete-action"
-                      onClick={() => onDeleteIncident(inc.id)}
-                      title="Supprimer ce feu de la carte et du système (Désaturation)"
-                    >
-                      <Trash2 size={14} />
-                      <span>Supprimer</span>
-                    </button>
-                  </div>
+                  {/* Delete fire (Removes from map to prevent saturation) */}
+                  <button
+                    type="button"
+                    className="btn-card-action delete-action"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDeleteIncident(inc.id);
+                    }}
+                    title="Supprimer ce feu de la carte et du système (Désaturation)"
+                  >
+                    <Trash2 size={14} />
+                    <span>Supprimer</span>
+                  </button>
                 </div>
               </div>
             );

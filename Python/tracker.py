@@ -117,25 +117,24 @@ class SpatialFireTracker:
 
     def get_dynamic_threshold(self, mean_luma: Optional[float] = None) -> float:
         """
-        Calculates dynamic confidence threshold based on ambient chamber lighting.
-        When room/chamber lights are turned ON (mean_luma > 105), camera exposure washes out
-        flame highlights and reduces contrast, lowering raw YOLO confidence slightly.
-        Dynamically scaling threshold from 0.70 down to ~0.58-0.62 prevents false negatives
-        while keeping strict suppression of false positives.
+        Calculates the adaptive continuity threshold used ONLY for keeping already-active
+        fire tracks alive when ambient brightness changes (lights ON/OFF).
+        NOTE: New track spawning ALWAYS uses the full base confidence_threshold (0.70)
+        to prevent false positives on faces, walls, or backgrounds.
         """
         if mean_luma is None:
             return self.confidence_threshold
 
         if mean_luma >= 125.0:
-            # High brightness / Chamber light ON: scale down to 0.58
-            return round(max(0.58, self.confidence_threshold - 0.12), 2)
+            # High brightness / Chamber light ON:
+            # Only relax continuity (not new-track threshold) down to 0.62
+            return round(max(0.62, self.confidence_threshold - 0.08), 2)
         elif mean_luma > 100.0:
-            # Transition region: interpolate smoothly between 0.70 and 0.60
+            # Transition region: interpolate smoothly
             ratio = (mean_luma - 100.0) / 25.0
-            eff = self.confidence_threshold - (0.10 * ratio)
-            return round(max(0.60, eff), 2)
+            eff = self.confidence_threshold - (0.06 * ratio)
+            return round(max(0.64, eff), 2)
         else:
-            # Normal or low-light: maintain standard high confidence
             return self.confidence_threshold
 
     def update(self, detections: List[Dict[str, Any]], now: Optional[float] = None, mean_luma: Optional[float] = None) -> List[TrackedFireArea]:
@@ -145,14 +144,17 @@ class SpatialFireTracker:
         if mean_luma is not None:
             self.current_mean_luma = mean_luma
 
-        effective_thresh = self.get_dynamic_threshold(mean_luma)
-        self.current_effective_threshold = effective_thresh
+        # Base threshold: ALWAYS required for spawning new fire tracks
+        # This prevents faces, walls, and background from being tracked at all.
+        base_thresh = self.confidence_threshold  # 0.70 — never lowered
 
-        # Continuity threshold for sustaining existing active tracks (even through lighting dips)
-        continuity_thresh = max(0.48, effective_thresh - 0.10)
+        # Continuity threshold: slightly relaxed for EXISTING active tracks only
+        # so that a sudden increase in room brightness doesn't kill a confirmed fire zone.
+        continuity_thresh = self.get_dynamic_threshold(mean_luma)
+        self.current_effective_threshold = continuity_thresh
 
-        # Qualifying detections for new tracks (confidence >= effective_thresh)
-        # or for continuing existing tracks (confidence >= continuity_thresh)
+        # Only consider detections that at least meet the continuity threshold
+        # (existing tracks may match at lower confidence; new ones must meet base_thresh)
         candidate_dets = [d for d in detections if d.get("confidence", 0) >= continuity_thresh]
 
         matched_track_ids = set()
@@ -173,11 +175,13 @@ class SpatialFireTracker:
                     best_track_id = tid
 
             if best_track_id is not None:
+                # Existing track: update even at continuity threshold
                 self.tracks[best_track_id].update(box, det["label"], det["confidence"], now)
                 matched_track_ids.add(best_track_id)
             else:
-                # For spawning NEW tracks, enforce the full effective_thresh
-                if det.get("confidence", 0) >= effective_thresh:
+                # NEW track: only spawn if detection meets the FULL base threshold (0.70)
+                # This is the critical gate that prevents false positives on faces
+                if det.get("confidence", 0) >= base_thresh:
                     unmatched_dets.append(det)
 
         # For existing tracks that were not matched this frame:
