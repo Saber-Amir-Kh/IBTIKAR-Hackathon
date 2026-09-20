@@ -88,7 +88,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterPlatform }) => 
       {/* 1. Navigation Bar (Frame 31 / Frame 32) */}
       <header className="figma-navbar">
         <button className="figma-logo-wrap" onClick={() => scrollToSection('hero-section', 'home')}>
-          <DroneLogoIcon size={44} />
+          <DroneLogoIcon size={36} />
         </button>
 
         <nav>
@@ -278,7 +278,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterPlatform }) => 
 
         {/* Bottom Bar: Logo + Copyright */}
         <div className="footer-bottom-bar">
-          <DroneLogoIcon size={38} />
+          <DroneLogoIcon size={30} />
           <span className="footer-copyright">© All Rights Reserved</span>
         </div>
       </footer>
