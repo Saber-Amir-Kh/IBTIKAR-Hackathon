@@ -39,26 +39,39 @@ export const LiveMap: React.FC<LiveMapProps> = ({
       zoomControl: true,
     });
 
-    // Dark Matter Tactical Basemap (High contrast, dark UI matching #040100)
-    const darkMatter = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-      subdomains: 'abcd',
-      maxZoom: 20,
+    // 1. Dark Tactical Map (Esri Dark Gray - 100% Free, NO WATERMARK, NO API KEY)
+    const darkBase = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
+      attribution: '&copy; Esri, DeLorme, NAVTEQ',
+      maxNativeZoom: 16,
+      maxZoom: 19,
     });
+    const darkLabels = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}', {
+      attribution: '',
+      maxNativeZoom: 16,
+      maxZoom: 19,
+    });
+    const darkTactical = L.layerGroup([darkBase, darkLabels]);
 
-    // Satellite Imagery Basemap (Esri World Imagery)
+    // 2. Satellite HD Map (Esri World Imagery - 100% Free, NO WATERMARK)
     const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
       attribution: '&copy; Esri, Maxar, Earthstar Geographics',
       maxZoom: 19,
     });
 
-    // Add dark tactical layer by default
-    darkMatter.addTo(map);
+    // 3. Topographic Relief Map (Esri World Topo - 100% Free, NO WATERMARK)
+    const topo = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', {
+      attribution: '&copy; Esri, USGS, NOAA',
+      maxZoom: 19,
+    });
 
-    // Layer Switcher (Tactical Dark vs Satellite)
+    // Add dark tactical layer group by default
+    darkTactical.addTo(map);
+
+    // Layer Switcher (Tactical Dark vs Satellite vs Topo)
     const baseLayers = {
-      "Tactique (Sombre)": darkMatter,
+      "Tactique (Sombre)": darkTactical,
       "Satellite HD": satellite,
+      "Topographique": topo,
     };
     L.control.layers(baseLayers, undefined, { position: 'topright' }).addTo(map);
 
