@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { Video, Bell, Radio, AlertCircle } from 'lucide-react';
 import type { EventLogItem } from '../types';
 
 interface SidePanelProps {
@@ -44,15 +43,15 @@ export const SidePanel: React.FC<SidePanelProps> = ({ events, onClearEvents }) =
           className={`side-tab ${activeTab === 'video' ? 'active' : ''}`}
           onClick={() => setActiveTab('video')}
         >
-          <Video size={15} />
+          <span className="tab-live-dot" />
           <span>Flux Vidéo Direct (:8001)</span>
         </button>
         <button
           className={`side-tab ${activeTab === 'feed' ? 'active' : ''}`}
           onClick={() => setActiveTab('feed')}
         >
-          <Bell size={15} />
-          <span>Journal Événements ({events.length})</span>
+          <span>Journal Événements</span>
+          <span className="tab-count-pill">{events.length}</span>
         </button>
       </div>
 
@@ -75,17 +74,16 @@ export const SidePanel: React.FC<SidePanelProps> = ({ events, onClearEvents }) =
               />
             ) : (
               <div className="video-fallback">
-                <AlertCircle size={38} className="icon-muted" />
-                <h4>Flux Caméra IA en Attente</h4>
+                <span className="fallback-reticle">⌖</span>
+                <h4>Flux Caméra en Attente</h4>
                 <p>
-                  Assurez-vous que <code>python main.py</code> est lancé dans le dossier <code>Python</code>.
+                  Assurez-vous que le service de flux vidéo est actif sur le port <code>{AI_PORT}</code>.
                 </p>
                 <div className="fallback-badge">Port {AI_PORT}</div>
                 <button
                   className="btn-tactical-cta mt-3"
                   onClick={() => setStreamError(false)}
                 >
-                  <Radio size={14} />
                   <span>Réessayer la connexion</span>
                 </button>
               </div>

@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { Plus, CheckCircle2, Package, Droplet, Wrench, ShieldCheck, Truck, HelpCircle } from 'lucide-react';
 import type { Need, NeedCategory, User } from '../types';
 import { createNeed, claimNeed } from '../api';
 
@@ -10,6 +9,14 @@ interface MutualAidBoardProps {
   onNeedCreated: (need: Need) => void;
   onNeedClaimed: (updatedNeed: Need) => void;
 }
+
+const CATEGORY_NAMES: Record<NeedCategory, string> = {
+  WATER: 'EAU & VIVRES',
+  TOOLS: 'OUTILS & PARE-FEU',
+  SAFETY: 'SÉCURITÉ & MASQUES',
+  TRANSPORT: 'VÉHICULES & TRANSPORT',
+  OTHER: 'SOUTIEN LOGISTIQUE',
+};
 
 export const MutualAidBoard: React.FC<MutualAidBoardProps> = ({
   incidentId,
@@ -80,16 +87,6 @@ export const MutualAidBoard: React.FC<MutualAidBoardProps> = ({
     }
   };
 
-  const getCategoryIcon = (cat: NeedCategory) => {
-    switch (cat) {
-      case 'WATER': return <Droplet size={16} className="text-blue" />;
-      case 'TOOLS': return <Wrench size={16} className="text-amber" />;
-      case 'SAFETY': return <ShieldCheck size={16} className="text-green" />;
-      case 'TRANSPORT': return <Truck size={16} className="text-purple" />;
-      default: return <HelpCircle size={16} className="text-gray" />;
-    }
-  };
-
   return (
     <div className="aid-board-container">
       <div className="aid-board-header">
@@ -105,8 +102,7 @@ export const MutualAidBoard: React.FC<MutualAidBoardProps> = ({
             className="btn btn-primary btn-sm"
             onClick={() => setShowCreateForm(!showCreateForm)}
           >
-            <Plus size={16} />
-            <span>{showCreateForm ? 'Fermer le formulaire' : 'Publier un besoin'}</span>
+            <span>{showCreateForm ? 'Fermer le formulaire' : '+ Publier un besoin'}</span>
           </button>
         )}
       </div>
@@ -167,8 +163,8 @@ export const MutualAidBoard: React.FC<MutualAidBoardProps> = ({
       <div className="needs-grid">
         {needs.length === 0 ? (
           <div className="empty-needs">
-            <Package size={36} className="icon-muted" />
-            <p>Aucun besoin logistique publié pour cet incident.</p>
+            <span className="empty-indicator-tag">TABLEAU DISPONIBLE</span>
+            <p>Aucun besoin logistique actif publié pour cet incident.</p>
           </div>
         ) : (
           needs.map((need) => {
@@ -179,10 +175,9 @@ export const MutualAidBoard: React.FC<MutualAidBoardProps> = ({
             return (
               <div key={need.id} className={`need-card ${need.status === 'FULFILLED' ? 'card-fulfilled' : ''}`}>
                 <div className="need-card-top">
-                  <div className="need-category-tag">
-                    {getCategoryIcon(need.category)}
-                    <span>{need.category}</span>
-                  </div>
+                  <span className={`need-category-pill category-${need.category.toLowerCase()}`}>
+                    {CATEGORY_NAMES[need.category] || need.category}
+                  </span>
                   <span className={`need-status-tag ${need.status.toLowerCase()}`}>
                     {need.status === 'FULFILLED' ? 'POURVU (100%)' : `RESTE : ${remaining}`}
                   </span>
@@ -236,7 +231,7 @@ export const MutualAidBoard: React.FC<MutualAidBoardProps> = ({
 
                   {need.status === 'FULFILLED' && (
                     <span className="badge-fulfilled-check">
-                      <CheckCircle2 size={16} /> Besoin satisfait
+                      ✓ Besoin satisfait
                     </span>
                   )}
                 </div>

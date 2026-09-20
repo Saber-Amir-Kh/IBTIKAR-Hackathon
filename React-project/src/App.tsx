@@ -24,7 +24,6 @@ import {
   triggerDemoDetection,
   resetDemo,
 } from './api';
-import { Zap, X } from 'lucide-react';
 import { LandingPage } from './components/LandingPage';
 import './App.css';
 
@@ -383,7 +382,7 @@ export const App: React.FC = () => {
         <div className="demo-tools-drawer">
           <div className="demo-tools-header">
             <div className="demo-tools-title">
-              <Zap size={18} className="text-warning" />
+              <span className="sim-bullet font-bold">●</span>
               <div>
                 <h4>Simulation & Outils Démo</h4>
                 <p>Tester le système sans saturer l'écran</p>
@@ -394,7 +393,7 @@ export const App: React.FC = () => {
               onClick={() => setShowDemoTools(false)}
               title="Fermer le panneau"
             >
-              <X size={18} />
+              ✕
             </button>
           </div>
 

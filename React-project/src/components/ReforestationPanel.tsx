@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { TreePine, Users, Sprout } from 'lucide-react';
 import type { PlantingZone, User } from '../types';
 import { registerVolunteer, plantTrees } from '../api';
 
@@ -64,19 +63,24 @@ export const ReforestationPanel: React.FC<ReforestationPanelProps> = ({
         </div>
       </div>
 
-      {/* Global Campaign Progress Card */}
+      {/* Global Campaign Progress Card (Clean Minimal Metrics, No Clipart Icons) */}
       <div className="campaign-summary-card">
         <div className="summary-metric">
-          <div className="metric-icon metric-green"><TreePine size={26} /></div>
-          <div>
-            <div className="metric-val">{totalPlanted.toLocaleString()} / {totalTarget.toLocaleString()}</div>
+          <div className="metric-accent-bar metric-bar-green" />
+          <div className="metric-details">
+            <span className="metric-category-tag tag-green">PLANTATIONS</span>
+            <div className="metric-val">
+              {totalPlanted.toLocaleString()}{' '}
+              <span className="metric-target-val">/ {totalTarget.toLocaleString()}</span>
+            </div>
             <div className="metric-lbl">Arbres indigènes plantés</div>
           </div>
         </div>
 
         <div className="summary-metric">
-          <div className="metric-icon metric-blue"><Users size={26} /></div>
-          <div>
+          <div className="metric-accent-bar metric-bar-blue" />
+          <div className="metric-details">
+            <span className="metric-category-tag tag-blue">MOBILISATION</span>
             <div className="metric-val">{totalVolunteers}</div>
             <div className="metric-lbl">Bénévoles mobilisés</div>
           </div>
@@ -112,7 +116,7 @@ export const ReforestationPanel: React.FC<ReforestationPanelProps> = ({
             >
               <div className="zone-card-top">
                 <div className="zone-name-wrap">
-                  <TreePine size={18} className={zonePct >= 100 ? 'text-green' : 'text-amber'} />
+                  <span className={`zone-status-dot ${zonePct >= 100 ? 'dot-green' : 'dot-amber'}`} />
                   <span className="zone-name">{zone.name}</span>
                 </div>
                 <span className={`zone-status-badge ${zone.status.toLowerCase()}`}>
@@ -120,7 +124,7 @@ export const ReforestationPanel: React.FC<ReforestationPanelProps> = ({
                 </span>
               </div>
 
-              {/* Progress bar with color shift preview */}
+              {/* Progress bar */}
               <div className="zone-progress-wrap">
                 <div className="progress-bar">
                   <div
@@ -134,7 +138,7 @@ export const ReforestationPanel: React.FC<ReforestationPanelProps> = ({
                 <div className="zone-stats">
                   <span>{zone.treesPlanted} / {zone.targetTrees} arbres</span>
                   <span className="font-bold">{zonePct}%</span>
-                  <span><Users size={12} /> {zone.registeredVolunteers} inscrits</span>
+                  <span>{zone.registeredVolunteers} volontaires</span>
                 </div>
               </div>
 
@@ -148,7 +152,7 @@ export const ReforestationPanel: React.FC<ReforestationPanelProps> = ({
                       disabled={isBusy}
                       title="S'inscrire comme bénévole pour cette parcelle"
                     >
-                      <Users size={13} /> S'inscrire
+                      S'inscrire
                     </button>
 
                     <div className="plant-btn-group">
@@ -157,7 +161,7 @@ export const ReforestationPanel: React.FC<ReforestationPanelProps> = ({
                         onClick={() => handlePlant(zone, 10)}
                         disabled={isBusy || zone.status === 'DONE'}
                       >
-                        <Sprout size={13} /> +10
+                        +10
                       </button>
                       <button
                         className="btn btn-success btn-xs"

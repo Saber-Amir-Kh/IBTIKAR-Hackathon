@@ -1,5 +1,4 @@
 import React from 'react';
-import { Radio, ShieldAlert, ChevronRight } from 'lucide-react';
 import type { Incident, User } from '../types';
 
 interface TopBarProps {
@@ -87,7 +86,7 @@ export const TopBar: React.FC<TopBarProps> = ({
             title="Inspecter les détails et valider l'alerte"
           >
             <span>Détails & Actions #{selectedIncident.id}</span>
-            <ChevronRight size={14} />
+            <span className="inspect-arrow">→</span>
           </button>
         )}
       </div>
@@ -95,13 +94,12 @@ export const TopBar: React.FC<TopBarProps> = ({
       {/* Center: Realtime Telemetry Status */}
       <div className="topbar-center">
         <div className="telemetry-pill">
-          <ShieldAlert size={14} className="text-amber" />
+          <span className="telemetry-live-dot amber" />
           <span>{droneCount} Drones en Vol</span>
         </div>
 
         <div className="ws-indicator-pill">
           <span className={`ws-dot-pulse ${wsConnected ? 'online' : 'offline'}`} />
-          <Radio size={13} />
           <span>{wsConnected ? 'Temps Réel Connecté' : 'Hors-ligne'}</span>
         </div>
       </div>
