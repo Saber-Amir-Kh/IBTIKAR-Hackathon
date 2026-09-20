@@ -65,4 +65,10 @@ public class IncidentController {
     public ResponseEntity<List<PlantingZone>> getZones(@PathVariable Long id) {
         return ResponseEntity.ok(plantingZoneService.getZonesByIncident(id));
     }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteIncident(@PathVariable Long id) {
+        incidentService.deleteIncident(id);
+        return ResponseEntity.noContent().build();
+    }
 }

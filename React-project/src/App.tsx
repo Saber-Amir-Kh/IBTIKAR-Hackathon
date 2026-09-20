@@ -6,6 +6,7 @@ import { SidePanel } from './components/SidePanel';
 import { IncidentDetailsModal } from './components/IncidentDetailsModal';
 import { MutualAidBoard } from './components/MutualAidBoard';
 import { ReforestationPanel } from './components/ReforestationPanel';
+import { FireManagementPanel } from './components/FireManagementPanel';
 import type {
   User,
   Incident,
@@ -21,6 +22,8 @@ import {
   getTelemetry,
   getNeeds,
   getZones,
+  updateIncidentStatus,
+  deleteIncident,
   triggerDemoDetection,
   resetDemo,
 } from './api';
@@ -58,7 +61,18 @@ export const App: React.FC = () => {
   const [selectedZone, setSelectedZone] = useState<PlantingZone | null>(null);
   const [events, setEvents] = useState<EventLogItem[]>([]);
   const [wsConnected, setWsConnected] = useState(false);
-  const [activeViewTab, setActiveViewTab] = useState<'map' | 'incident' | 'aid' | 'reforest'>('map');
+  const [activeViewTab, setActiveViewTab] = useState<'map' | 'incident' | 'aid' | 'reforest' | 'fires'>('map');
+  const [mapFilter, setMapFilter] = useState<'ALL' | 'ACTIVE_ONLY'>(() => {
+    return (localStorage.getItem('sentinelle_map_filter') as 'ALL' | 'ACTIVE_ONLY') || 'ALL';
+  });
+  const [assignedTeams, setAssignedTeams] = useState<Record<number, string>>(() => {
+    try {
+      const saved = localStorage.getItem('sentinelle_fire_teams');
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  });
   const [isTriggering, setIsTriggering] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
   const [inspectModalOpen, setInspectModalOpen] = useState(false);
@@ -260,6 +274,18 @@ export const App: React.FC = () => {
         addEvent('REBOISEMENT', `Parcelle mise à jour : ${zone.name} (${zone.treesPlanted}/${zone.targetTrees} arbres)`, zone.incidentId);
         break;
       }
+      case 'incident_deleted': {
+        const payload = msg.payload;
+        const deletedId = typeof payload === 'object' && payload !== null ? payload.id : Number(payload);
+        if (deletedId) {
+          setIncidents((prev) => prev.filter((i) => i.id !== deletedId));
+          if (selectedIncident?.id === deletedId) {
+            setSelectedIncident(null);
+          }
+          addEvent('INCIDENT', `Feu #${deletedId} supprimé du système (Désaturation).`);
+        }
+        break;
+      }
       case 'demo_reset': {
         loadInitialData();
         addEvent('DEMO', 'La base de données a été réinitialisée avec succès (feux de test supprimés).');
@@ -268,6 +294,69 @@ export const App: React.FC = () => {
       default:
         console.log('Unhandled WS message:', msg);
     }
+  };
+
+  // Fire Management & Anti-Saturation Handlers
+  const handleDeleteIncident = async (id: number) => {
+    try {
+      await deleteIncident(id);
+      setIncidents((prev) => prev.filter((i) => i.id !== id));
+      if (selectedIncident?.id === id) {
+        setSelectedIncident((prev) => (prev?.id === id ? null : prev));
+      }
+      addEvent('SUPPRESSION', `Feu #${id} supprimé de la carte (Désaturation).`);
+    } catch (err: any) {
+      alert('Erreur lors de la suppression du feu : ' + err.message);
+    }
+  };
+
+  const handleKeepIncident = async (inc: Incident) => {
+    try {
+      const updated = await updateIncidentStatus(inc.id, 'ACTIVE', currentUser.name);
+      setIncidents((prev) => prev.map((i) => (i.id === updated.id ? updated : i)));
+      if (selectedIncident?.id === updated.id) {
+        setSelectedIncident(updated);
+      }
+      addEvent('CONFIRMATION', `Feu #${inc.id} confirmé et conservé comme feu actif prioritaire.`, inc.id);
+    } catch (err: any) {
+      alert('Erreur lors de la confirmation du feu : ' + err.message);
+    }
+  };
+
+  const handleAssignTeam = (incidentId: number, teamName: string) => {
+    setAssignedTeams((prev) => {
+      const next = { ...prev, [incidentId]: teamName };
+      localStorage.setItem('sentinelle_fire_teams', JSON.stringify(next));
+      return next;
+    });
+    addEvent(
+      'ÉQUIPE',
+      teamName ? `Équipe "${teamName}" assignée au feu #${incidentId}.` : `Équipe retirée du feu #${incidentId}.`,
+      incidentId
+    );
+  };
+
+  const handleToggleMapFilter = (filter: 'ALL' | 'ACTIVE_ONLY') => {
+    setMapFilter(filter);
+    localStorage.setItem('sentinelle_map_filter', filter);
+    addEvent(
+      'FILTRE',
+      filter === 'ACTIVE_ONLY'
+        ? 'Désaturation activée : seuls les feux actifs sont affichés sur la carte.'
+        : 'Affichage complet : tous les feux sont visibles sur la carte.'
+    );
+  };
+
+  const handleClearDismissed = async () => {
+    const dismissed = incidents.filter((i) => i.status === 'DISMISSED');
+    if (dismissed.length === 0) return;
+    if (!window.confirm(`Supprimer définitivement ${dismissed.length} feux rejetés pour désaturer la carte ?`)) return;
+
+    for (const d of dismissed) {
+      await deleteIncident(d.id);
+    }
+    setIncidents((prev) => prev.filter((i) => i.status !== 'DISMISSED'));
+    addEvent('NETTOYAGE', `${dismissed.length} alertes rejetées supprimées définitivement.`);
   };
 
   // Demo Actions
@@ -301,14 +390,19 @@ export const App: React.FC = () => {
     return <LandingPage onEnterPlatform={() => navigateTo('dashboard')} />;
   }
 
+  const mapIncidents = mapFilter === 'ACTIVE_ONLY'
+    ? incidents.filter((i) => i.status === 'ACTIVE' || i.status === 'PENDING_VERIFICATION')
+    : incidents;
+
   return (
     <div className="tactical-shell">
       {/* 1. Tactical Left Sidebar */}
       <Sidebar
-        activeTab={activeViewTab === 'map' ? 'map' : activeViewTab === 'aid' ? 'aid' : 'reforest'}
+        activeTab={activeViewTab === 'map' ? 'map' : activeViewTab === 'aid' ? 'aid' : activeViewTab === 'fires' ? 'fires' : 'reforest'}
         onSelectTab={(tab) => setActiveViewTab(tab)}
         needsCount={needs.length}
         zonesCount={zones.length}
+        firesCount={incidents.length}
         showDemoTools={showDemoTools}
         onToggleDemoTools={() => setShowDemoTools((prev) => !prev)}
         onBackToLanding={() => navigateTo('landing')}
@@ -339,7 +433,7 @@ export const App: React.FC = () => {
             <div className="map-view-layout">
               <div className="map-column">
                 <LiveMap
-                  incidents={incidents}
+                  incidents={mapIncidents}
                   drones={drones}
                   selectedIncident={selectedIncident}
                   onSelectIncident={(inc) => {
@@ -374,8 +468,49 @@ export const App: React.FC = () => {
                     }
                     setInspectModalOpen(true);
                   }}
+                  incidents={incidents}
+                  selectedIncident={selectedIncident}
+                  onSelectIncident={(inc) => {
+                    setSelectedIncident(inc);
+                    loadIncidentSubData(inc.id);
+                  }}
+                  onInspectIncident={(inc) => {
+                    setSelectedIncident(inc);
+                    loadIncidentSubData(inc.id);
+                    setInspectModalOpen(true);
+                  }}
+                  onDeleteIncident={handleDeleteIncident}
+                  onKeepIncident={handleKeepIncident}
+                  onAssignTeam={handleAssignTeam}
+                  assignedTeams={assignedTeams}
                 />
               </div>
+            </div>
+          )}
+
+          {activeViewTab === 'fires' && (
+            <div className="subview-layout">
+              <FireManagementPanel
+                incidents={incidents}
+                selectedIncident={selectedIncident}
+                onSelectIncident={(inc) => {
+                  setSelectedIncident(inc);
+                  loadIncidentSubData(inc.id);
+                }}
+                onInspectIncident={(inc) => {
+                  setSelectedIncident(inc);
+                  loadIncidentSubData(inc.id);
+                  setInspectModalOpen(true);
+                }}
+                onDeleteIncident={handleDeleteIncident}
+                onKeepIncident={handleKeepIncident}
+                onAssignTeam={handleAssignTeam}
+                assignedTeams={assignedTeams}
+                mapFilter={mapFilter}
+                onToggleMapFilter={handleToggleMapFilter}
+                onClearDismissed={handleClearDismissed}
+                onNavigateToMap={() => setActiveViewTab('map')}
+              />
             </div>
           )}
 

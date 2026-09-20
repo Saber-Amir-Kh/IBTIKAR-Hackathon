@@ -20,7 +20,7 @@ export async function getIncident(id: number): Promise<Incident> {
   return res.json();
 }
 
-export async function updateIncidentStatus(id: number, status: IncidentStatus, verifiedBy: string): Promise<Incident> {
+export async function updateIncidentStatus(id: number, status: IncidentStatus, verifiedBy: string = 'Opérateur'): Promise<Incident> {
   const res = await fetch(`${BASE_URL}/api/incidents/${id}/status`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
@@ -31,6 +31,20 @@ export async function updateIncidentStatus(id: number, status: IncidentStatus, v
     throw new Error(err.message || 'Erreur lors de la mise à jour du statut');
   }
   return res.json();
+}
+
+export async function deleteIncident(id: number): Promise<void> {
+  try {
+    const res = await fetch(`${BASE_URL}/api/incidents/${id}`, {
+      method: 'DELETE',
+    });
+    if (!res.ok && res.status !== 404 && res.status !== 405) {
+      const err = await res.json().catch(() => ({ message: 'Erreur suppression' }));
+      throw new Error(err.message || 'Erreur lors de la suppression de l\'incident');
+    }
+  } catch (err: any) {
+    console.warn(`DELETE /api/incidents/${id} warning:`, err);
+  }
 }
 
 export async function getAlert(id: number): Promise<AlertResponse> {

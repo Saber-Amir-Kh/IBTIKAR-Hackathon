@@ -1,4 +1,5 @@
 import React from 'react';
+import { Flame } from 'lucide-react';
 import {
   RadarScopeIcon,
   TouizaReliefIcon,
@@ -8,10 +9,11 @@ import {
 } from './TacticalIcons';
 
 interface SidebarProps {
-  activeTab: 'map' | 'aid' | 'reforest';
-  onSelectTab: (tab: 'map' | 'aid' | 'reforest') => void;
+  activeTab: 'map' | 'aid' | 'reforest' | 'fires';
+  onSelectTab: (tab: 'map' | 'aid' | 'reforest' | 'fires') => void;
   needsCount: number;
   zonesCount: number;
+  firesCount?: number;
   showDemoTools: boolean;
   onToggleDemoTools: () => void;
   onBackToLanding: () => void;
@@ -37,6 +39,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onSelectTab,
   needsCount,
   zonesCount,
+  firesCount = 0,
   showDemoTools,
   onToggleDemoTools,
   onBackToLanding,
@@ -66,6 +69,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </button>
 
         <button
+          className={`sidebar-nav-btn ${activeTab === 'fires' ? 'active' : ''}`}
+          onClick={() => onSelectTab('fires')}
+          title="Gestion des Feux & Équipes Déployées (Désaturation carte)"
+        >
+          <div className="sidebar-icon-box">
+            <Flame size={18} />
+          </div>
+          <span className="btn-label">Gestion Feux</span>
+          {firesCount > 0 && <span className="nav-badge danger">{firesCount}</span>}
+        </button>
+
+        <button
           className={`sidebar-nav-btn ${activeTab === 'aid' ? 'active' : ''}`}
           onClick={() => onSelectTab('aid')}
           title="Entraide Communautaire (Touiza)"
@@ -89,6 +104,24 @@ export const Sidebar: React.FC<SidebarProps> = ({
           {zonesCount > 0 && <span className="nav-badge green">{zonesCount}</span>}
         </button>
       </nav>
+
+      {/* Quick Anti-Saturation Fire Widget in Sidebar */}
+      {firesCount > 0 && (
+        <div className="sidebar-fire-widget">
+          <div className="fire-widget-header">
+            <span className="widget-dot-pulse" />
+            <span className="widget-title">{firesCount} Feux sur la Carte</span>
+          </div>
+          <button
+            className="btn-sidebar-quick-action"
+            onClick={() => onSelectTab('fires')}
+            title="Gérer les feux, supprimer les fausses alertes ou assigner des équipes"
+          >
+            <span>Gérer & Désaturer</span>
+            <span>→</span>
+          </button>
+        </div>
+      )}
 
       {/* Bottom Utility Actions */}
       <div className="sidebar-footer">

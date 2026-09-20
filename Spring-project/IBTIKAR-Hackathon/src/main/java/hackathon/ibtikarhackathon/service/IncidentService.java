@@ -26,15 +26,18 @@ public class IncidentService {
     private final IncidentRepository incidentRepository;
     private final DroneTelemetryService droneTelemetryService;
     private final PlantingZoneService plantingZoneService;
+    private final NeedService needService;
     private final PlainWebSocketHandler webSocketHandler;
 
     public IncidentService(IncidentRepository incidentRepository,
                            DroneTelemetryService droneTelemetryService,
                            PlantingZoneService plantingZoneService,
+                           NeedService needService,
                            PlainWebSocketHandler webSocketHandler) {
         this.incidentRepository = incidentRepository;
         this.droneTelemetryService = droneTelemetryService;
         this.plantingZoneService = plantingZoneService;
+        this.needService = needService;
         this.webSocketHandler = webSocketHandler;
     }
 
@@ -45,6 +48,18 @@ public class IncidentService {
     public Incident getIncidentById(Long id) {
         return incidentRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Incident non trouvé avec l'identifiant: " + id));
+    }
+
+    @Transactional
+    public void deleteIncident(Long id) {
+        if (!incidentRepository.existsById(id)) {
+            return;
+        }
+        needService.deleteByIncidentId(id);
+        plantingZoneService.deleteByIncidentId(id);
+        incidentRepository.deleteById(id);
+        log.info("Incident ID={} supprimé avec succès de la base de données", id);
+        webSocketHandler.broadcast("incident_deleted", java.util.Map.of("id", id));
     }
 
     @Transactional

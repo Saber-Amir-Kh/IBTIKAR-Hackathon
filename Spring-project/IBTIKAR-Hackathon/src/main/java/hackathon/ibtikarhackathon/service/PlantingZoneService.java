@@ -27,6 +27,12 @@ public class PlantingZoneService {
     }
 
     @Transactional
+    public void deleteByIncidentId(Long incidentId) {
+        List<PlantingZone> zones = zoneRepository.findByIncidentIdOrderByIdAsc(incidentId);
+        zoneRepository.deleteAll(zones);
+    }
+
+    @Transactional
     public List<PlantingZone> generateZonesForIncident(Long incidentId, Double centerLat, Double centerLon) {
         // If zones already exist, return them
         List<PlantingZone> existing = zoneRepository.findByIncidentIdOrderByIdAsc(incidentId);

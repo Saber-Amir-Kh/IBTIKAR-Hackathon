@@ -38,6 +38,15 @@ public class NeedService {
     }
 
     @Transactional
+    public void deleteByIncidentId(Long incidentId) {
+        List<Need> needs = needRepository.findByIncidentIdOrderByIdAsc(incidentId);
+        for (Need need : needs) {
+            claimRepository.deleteAll(claimRepository.findByNeedIdOrderByCreatedAtDesc(need.getId()));
+        }
+        needRepository.deleteAll(needs);
+    }
+
+    @Transactional
     public Need createNeed(Long incidentId, NeedCreateRequest request) {
         if (request.getTitle() == null || request.getTitle().isBlank()) {
             throw new IllegalArgumentException("Le titre du besoin est obligatoire");
