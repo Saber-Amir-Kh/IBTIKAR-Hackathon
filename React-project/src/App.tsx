@@ -126,12 +126,11 @@ export const App: React.FC = () => {
   // Fetch initial data
   const loadInitialData = useCallback(async () => {
     try {
-      const fetchedUsers = await getUsers().catch(() => DEFAULT_USERS);
-      if (fetchedUsers.length > 0) {
-        setUsers(fetchedUsers);
-        // keep current user role if matches or default
-        setCurrentUser((prev) => fetchedUsers.find((u) => u.id === prev.id) || fetchedUsers[0]);
-      }
+      // Always use DEFAULT_USERS for the role switcher so all 4 test roles are available.
+      // Backend may only have 1 persisted user — we don't want to lose the test personas.
+      await getUsers().catch(() => null); // fire and forget, for backend warm-up
+      setUsers(DEFAULT_USERS);
+      setCurrentUser(DEFAULT_USERS[0]);
 
       const fetchedIncidents = await getIncidents();
       setIncidents(fetchedIncidents);

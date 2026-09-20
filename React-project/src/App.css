@@ -3435,19 +3435,15 @@ body {
 }
 
 .custom-select-dropdown {
-  position: absolute;
-  top: calc(100% + 5px);
-  left: 0;
-  right: 0;
-  min-width: 100%;
-  background: #141724;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  border-radius: 8px;
-  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.05);
-  z-index: 10000;
+  /* Position is injected by portal JS via inline style (position: fixed + top/left/width/z-index) */
+  min-width: 180px;
+  background: #1a1d2e;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 10px;
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.85), 0 0 0 1px rgba(255, 255, 255, 0.06);
   overflow: hidden;
-  backdrop-filter: blur(16px);
-  animation: customSelectFade 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+  backdrop-filter: blur(20px);
+  animation: customSelectFade 0.13s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 @keyframes customSelectFade {
