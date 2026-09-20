@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, CheckCircle, Copy, Shield, MapPin, Calendar, Check } from 'lucide-react';
+import { X, CheckCircle, Copy, Shield, MapPin, Calendar, Check, Minus, Loader2 } from 'lucide-react';
 import type { Incident, User, AlertResponse, IncidentStatus } from '../types';
 import { getAlert, updateIncidentStatus } from '../api';
 
@@ -29,6 +29,17 @@ export const IncidentDetailsModal: React.FC<IncidentDetailsModalProps> = ({
       setAlertData(null);
     }
   }, [incident]);
+
+  // Handle ESC key to minimize / close
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
 
   const loadAlert = async (id: number) => {
     try {
@@ -66,11 +77,18 @@ export const IncidentDetailsModal: React.FC<IncidentDetailsModalProps> = ({
   };
 
   const isCommitteeHead = currentUser.role === 'COMMITTEE_HEAD';
-  const isCoordinator = currentUser.role === 'COORDINATOR';
 
   return (
-    <div className="modal-overlay">
-      <div className="modal-card">
+    <div
+      className="modal-overlay"
+      onClick={(e) => {
+        // Minimize / dismiss when clicking anywhere outside of the modal card
+        if (e.target === e.currentTarget) {
+          onClose();
+        }
+      }}
+    >
+      <div className="modal-card" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <div className="modal-title-wrap">
             <h3 className="modal-title">Fiche Incident #{incident.id}</h3>
@@ -78,9 +96,22 @@ export const IncidentDetailsModal: React.FC<IncidentDetailsModalProps> = ({
               {incident.status}
             </span>
           </div>
-          <button className="btn-close" onClick={onClose}>
-            <X size={20} />
-          </button>
+          <div className="modal-header-actions">
+            <button
+              className="btn-header-action"
+              onClick={onClose}
+              title="Réduire (ou cliquer en dehors de la fenêtre)"
+            >
+              <Minus size={18} />
+            </button>
+            <button
+              className="btn-header-action btn-close"
+              onClick={onClose}
+              title="Fermer"
+            >
+              <X size={18} />
+            </button>
+          </div>
         </div>
 
         <div className="modal-body">
@@ -129,29 +160,31 @@ export const IncidentDetailsModal: React.FC<IncidentDetailsModalProps> = ({
                 </div>
               )}
 
-              {/* Committee Head Action Buttons */}
+              {/* Action Buttons for Pending Verification */}
               {incident.status === 'PENDING_VERIFICATION' && (
                 <div className="verification-actions">
                   <p className="notice-text">
                     {isCommitteeHead
-                      ? 'Action requise : Confirmer ou rejeter la détection transmise par le drone.'
-                      : 'Réservé au Chef du Comité Tajmaât (Amine Ait-Ahmed) pour validation terrain.'}
+                      ? 'Action requise (Chef de Comité Tajmaât) : Confirmez ou rejetez la détection transmise par le drone.'
+                      : `Validation opérationnelle (${currentUser.name} — ${currentUser.role}) : Confirmez ou rejetez la détection.`}
                   </p>
                   <div className="btn-group">
                     <button
                       className="btn btn-danger"
                       onClick={() => handleStatusChange('ACTIVE')}
-                      disabled={!isCommitteeHead || isProcessing}
+                      disabled={isProcessing}
+                      title="Valider la détection et déclencher l'alerte communautaire"
                     >
-                      <CheckCircle size={16} />
-                      <span>Confirmer l'incendie</span>
+                      {isProcessing ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle size={16} />}
+                      <span>{isProcessing ? 'Traitement...' : "Confirmer l'incendie"}</span>
                     </button>
                     <button
                       className="btn btn-secondary"
                       onClick={() => handleStatusChange('DISMISSED')}
-                      disabled={!isCommitteeHead || isProcessing}
+                      disabled={isProcessing}
+                      title="Rejeter la détection comme fausse alerte ou brûlage contrôlé"
                     >
-                      <X size={16} />
+                      {isProcessing ? <Loader2 size={16} className="animate-spin" /> : <X size={16} />}
                       <span>Rejeter (brûlage contrôlé)</span>
                     </button>
                   </div>
@@ -164,16 +197,14 @@ export const IncidentDetailsModal: React.FC<IncidentDetailsModalProps> = ({
                   <p className="notice-text">
                     Le feu est actuellement actif. Une fois le périmètre sécurisé, marquez l'incident comme maîtrisé.
                   </p>
-                  {(isCoordinator || isCommitteeHead) && (
-                    <button
-                      className="btn btn-warning"
-                      onClick={() => handleStatusChange('CONTAINED')}
-                      disabled={isProcessing}
-                    >
-                      <Shield size={16} />
-                      <span>Marquer l'incendie maîtrisé (Contenu)</span>
-                    </button>
-                  )}
+                  <button
+                    className="btn btn-warning"
+                    onClick={() => handleStatusChange('CONTAINED')}
+                    disabled={isProcessing}
+                  >
+                    {isProcessing ? <Loader2 size={16} className="animate-spin" /> : <Shield size={16} />}
+                    <span>Marquer l'incendie maîtrisé (Contenu)</span>
+                  </button>
                 </div>
               )}
 
@@ -188,6 +219,7 @@ export const IncidentDetailsModal: React.FC<IncidentDetailsModalProps> = ({
                     onClick={() => handleStatusChange('REFORESTATION')}
                     disabled={isProcessing}
                   >
+                    {isProcessing ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
                     <span>Lancer officiellement la campagne de reboisement</span>
                   </button>
                 </div>

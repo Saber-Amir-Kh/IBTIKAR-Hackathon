@@ -97,4 +97,5 @@ export interface EventLogItem {
   time: string;
   type: string;
   text: string;
+  incidentId?: number;
 }

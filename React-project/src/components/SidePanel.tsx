@@ -4,6 +4,7 @@ import type { EventLogItem } from '../types';
 interface SidePanelProps {
   events: EventLogItem[];
   onClearEvents: () => void;
+  onSelectEvent?: (event: EventLogItem) => void;
 }
 
 // Target / Crosshair corner markers (CIBLE ASSET) from Figma
@@ -28,7 +29,7 @@ const TargetCorners: React.FC = () => (
   </>
 );
 
-export const SidePanel: React.FC<SidePanelProps> = ({ events, onClearEvents }) => {
+export const SidePanel: React.FC<SidePanelProps> = ({ events, onClearEvents, onSelectEvent }) => {
   const [streamError, setStreamError] = useState(false);
   const [activeTab, setActiveTab] = useState<'video' | 'feed'>('video');
   const AI_PORT = '8001';
@@ -105,10 +106,21 @@ export const SidePanel: React.FC<SidePanelProps> = ({ events, onClearEvents }) =
                 <div className="empty-feed">Aucun événement reçu pour le moment.</div>
               ) : (
                 events.map((evt) => (
-                  <div key={evt.id} className={`event-card event-${evt.type}`}>
-                    <div className="event-time">{evt.time}</div>
-                    <div className="event-badge">{evt.type}</div>
+                  <div
+                    key={evt.id}
+                    className={`event-card event-${evt.type} clickable-event`}
+                    onClick={() => onSelectEvent?.(evt)}
+                    title="Cliquer pour afficher la fiche de cet incident"
+                  >
+                    <div className="event-card-header">
+                      <span className="event-time">{evt.time}</span>
+                      <span className="event-badge">{evt.type}</span>
+                    </div>
                     <div className="event-text">{evt.text}</div>
+                    <div className="event-card-footer">
+                      <span className="event-hint">Afficher la fiche</span>
+                      <span className="event-arrow">↗</span>
+                    </div>
                   </div>
                 ))
               )}

@@ -93,12 +93,13 @@ export const App: React.FC = () => {
 
   const wsRef = useRef<WebSocket | null>(null);
 
-  const addEvent = useCallback((type: string, text: string) => {
+  const addEvent = useCallback((type: string, text: string, incidentId?: number) => {
     const item: EventLogItem = {
       id: Math.random().toString(36).substring(2, 9),
       time: new Date().toLocaleTimeString('fr-DZ'),
       type,
       text,
+      incidentId,
     };
     setEvents((prev) => [item, ...prev.slice(0, 49)]);
   }, []);
@@ -219,7 +220,7 @@ export const App: React.FC = () => {
         setSelectedIncident(newInc);
         loadIncidentSubData(newInc.id);
         setInspectModalOpen(true);
-        addEvent('DETECTION', `Alerte départ de feu détecté par ${newInc.droneId} (Confiance: ${(newInc.confidence * 100).toFixed(0)}%) !`);
+        addEvent('DETECTION', `Alerte départ de feu détecté par ${newInc.droneId} (Confiance: ${(newInc.confidence * 100).toFixed(0)}%) !`, newInc.id);
         break;
       }
       case 'incident_updated': {
@@ -229,7 +230,7 @@ export const App: React.FC = () => {
           setSelectedIncident(updated);
           loadIncidentSubData(updated.id);
         }
-        addEvent('INCIDENT', `Incident #${updated.id} mis à jour : Statut -> ${updated.status}`);
+        addEvent('INCIDENT', `Incident #${updated.id} mis à jour : Statut -> ${updated.status}`, updated.id);
         break;
       }
       case 'need_posted': {
@@ -237,7 +238,7 @@ export const App: React.FC = () => {
         if (selectedIncident?.id === need.incidentId) {
           setNeeds((prev) => [...prev.filter((n) => n.id !== need.id), need]);
         }
-        addEvent('BESOIN', `Nouveau besoin publié : ${need.title} (${need.quantity})`);
+        addEvent('BESOIN', `Nouveau besoin publié : ${need.title} (${need.quantity})`, need.incidentId);
         break;
       }
       case 'need_claimed': {
@@ -245,7 +246,7 @@ export const App: React.FC = () => {
         if (selectedIncident?.id === need.incidentId) {
           setNeeds((prev) => prev.map((n) => (n.id === need.id ? need : n)));
         }
-        addEvent('RÉCLAMATION', `Besoin satisfait : ${need.title} (${need.quantityClaimed}/${need.quantity})`);
+        addEvent('RÉCLAMATION', `Besoin satisfait : ${need.title} (${need.quantityClaimed}/${need.quantity})`, need.incidentId);
         break;
       }
       case 'zone_updated': {
@@ -256,7 +257,7 @@ export const App: React.FC = () => {
             setSelectedZone(zone);
           }
         }
-        addEvent('REBOISEMENT', `Parcelle mise à jour : ${zone.name} (${zone.treesPlanted}/${zone.targetTrees} arbres)`);
+        addEvent('REBOISEMENT', `Parcelle mise à jour : ${zone.name} (${zone.treesPlanted}/${zone.targetTrees} arbres)`, zone.incidentId);
         break;
       }
       case 'demo_reset': {
@@ -322,6 +323,7 @@ export const App: React.FC = () => {
           onSelectIncident={(inc) => {
             setSelectedIncident(inc);
             loadIncidentSubData(inc.id);
+            setInspectModalOpen(true);
           }}
           onInspectIncident={() => setInspectModalOpen(true)}
           currentUser={currentUser}
@@ -354,7 +356,25 @@ export const App: React.FC = () => {
                 />
               </div>
               <div className="side-column">
-                <SidePanel events={events} onClearEvents={() => setEvents([])} />
+                <SidePanel
+                  events={events}
+                  onClearEvents={() => setEvents([])}
+                  onSelectEvent={(evt) => {
+                    if (evt.incidentId) {
+                      const match = incidents.find((i) => i.id === evt.incidentId);
+                      if (match) {
+                        setSelectedIncident(match);
+                        loadIncidentSubData(match.id);
+                      }
+                    } else if (selectedIncident) {
+                      loadIncidentSubData(selectedIncident.id);
+                    } else if (incidents.length > 0) {
+                      setSelectedIncident(incidents[0]);
+                      loadIncidentSubData(incidents[0].id);
+                    }
+                    setInspectModalOpen(true);
+                  }}
+                />
               </div>
             </div>
           )}
