@@ -7,35 +7,51 @@ interface SidePanelProps {
   onClearEvents: () => void;
 }
 
+// Target / Crosshair corner markers (CIBLE ASSET) from Figma
+const TargetCorners: React.FC = () => (
+  <>
+    <div className="cible-corner cible-top-left">
+      <span className="cible-arm-h" />
+      <span className="cible-arm-v" />
+    </div>
+    <div className="cible-corner cible-top-right">
+      <span className="cible-arm-h" />
+      <span className="cible-arm-v" />
+    </div>
+    <div className="cible-corner cible-bottom-left">
+      <span className="cible-arm-h" />
+      <span className="cible-arm-v" />
+    </div>
+    <div className="cible-corner cible-bottom-right">
+      <span className="cible-arm-h" />
+      <span className="cible-arm-v" />
+    </div>
+  </>
+);
+
 export const SidePanel: React.FC<SidePanelProps> = ({ events, onClearEvents }) => {
   const [streamError, setStreamError] = useState(false);
   const [activeTab, setActiveTab] = useState<'video' | 'feed'>('video');
-  const [aiPort, setAiPort] = useState<string>('8001');
-
-  const handleStreamError = () => {
-    if (aiPort === '8001') {
-      // Try fallback port 8000
-      setAiPort('8000');
-    } else {
-      setStreamError(true);
-    }
-  };
+  const AI_PORT = '8001';
 
   return (
-    <div className="side-panel">
+    <div className="tactical-side-panel">
+      <TargetCorners />
+
+      {/* Tabs */}
       <div className="side-tabs">
         <button
           className={`side-tab ${activeTab === 'video' ? 'active' : ''}`}
           onClick={() => setActiveTab('video')}
         >
-          <Video size={16} />
-          <span>Flux Vidéo Direct (Port {aiPort})</span>
+          <Video size={15} />
+          <span>Flux Vidéo Direct (:8001)</span>
         </button>
         <button
           className={`side-tab ${activeTab === 'feed' ? 'active' : ''}`}
           onClick={() => setActiveTab('feed')}
         >
-          <Bell size={16} />
+          <Bell size={15} />
           <span>Journal Événements ({events.length})</span>
         </button>
       </div>
@@ -45,34 +61,32 @@ export const SidePanel: React.FC<SidePanelProps> = ({ events, onClearEvents }) =
           <div className="video-container">
             <div className="video-header">
               <span className="live-indicator">
-                <span className="live-dot"></span> EN DIRECT
+                <span className="live-dot" /> EN DIRECT
               </span>
-              <span className="stream-source">http://localhost:{aiPort}/proxy_feed</span>
+              <span className="stream-source">http://localhost:{AI_PORT}/proxy_feed</span>
             </div>
 
             {!streamError ? (
               <img
-                src={`http://localhost:${aiPort}/proxy_feed`}
+                src={`http://localhost:${AI_PORT}/proxy_feed`}
                 alt="Flux Vidéo Drone Surveillance"
                 className="live-video-stream"
-                onError={handleStreamError}
+                onError={() => setStreamError(true)}
               />
             ) : (
               <div className="video-fallback">
-                <AlertCircle size={40} className="icon-muted" />
+                <AlertCircle size={38} className="icon-muted" />
                 <h4>Flux Caméra IA en Attente</h4>
                 <p>
                   Assurez-vous que <code>python main.py</code> est lancé dans le dossier <code>Python</code>.
                 </p>
-                <div className="fallback-badge">Port {aiPort}</div>
+                <div className="fallback-badge">Port {AI_PORT}</div>
                 <button
-                  className="btn btn-secondary btn-sm mt-2"
-                  onClick={() => {
-                    setStreamError(false);
-                    setAiPort('8001');
-                  }}
+                  className="btn-tactical-cta mt-3"
+                  onClick={() => setStreamError(false)}
                 >
-                  <Radio size={14} /> Réessayer la connexion
+                  <Radio size={14} />
+                  <span>Réessayer la connexion</span>
                 </button>
               </div>
             )}

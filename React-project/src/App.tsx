@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Header } from './components/Header';
+import { Sidebar } from './components/Sidebar';
+import { TopBar } from './components/TopBar';
 import { LiveMap } from './components/LiveMap';
 import { SidePanel } from './components/SidePanel';
 import { IncidentDetailsModal } from './components/IncidentDetailsModal';
@@ -23,7 +24,7 @@ import {
   triggerDemoDetection,
   resetDemo,
 } from './api';
-import { Package, TreePine, Map as MapIcon, Zap, X } from 'lucide-react';
+import { Zap, X } from 'lucide-react';
 import { LandingPage } from './components/LandingPage';
 import './App.css';
 
@@ -262,157 +263,106 @@ export const App: React.FC = () => {
   }
 
   return (
-    <div className="app-container">
-      <Header
-        currentUser={currentUser}
-        users={users}
-        onSelectUser={setCurrentUser}
-        wsConnected={wsConnected}
-        onToggleDemoTools={() => setShowDemoTools((prev) => !prev)}
+    <div className="tactical-shell">
+      {/* 1. Tactical Left Sidebar */}
+      <Sidebar
+        activeTab={activeViewTab === 'map' ? 'map' : activeViewTab === 'aid' ? 'aid' : 'reforest'}
+        onSelectTab={(tab) => setActiveViewTab(tab)}
+        needsCount={needs.length}
+        zonesCount={zones.length}
         showDemoTools={showDemoTools}
+        onToggleDemoTools={() => setShowDemoTools((prev) => !prev)}
         onBackToLanding={() => setCurrentView('landing')}
       />
 
-      {/* Incident Quick Selector Bar (Clean & Compact) */}
-      <div className="incident-selector-bar">
-        <div className="selector-group">
-          <span className="selector-label">Incident sélectionné :</span>
-          {incidents.length > 0 ? (
-            <select
-              className="incident-dropdown"
-              value={selectedIncident?.id || ''}
-              onChange={(e) => {
-                const inc = incidents.find((i) => i.id === Number(e.target.value));
-                if (inc) {
-                  setSelectedIncident(inc);
-                  loadIncidentSubData(inc.id);
-                }
-              }}
-            >
-              {incidents.map((inc) => (
-                <option key={inc.id} value={inc.id}>
-                  #{inc.id} [{inc.status}] — {inc.droneId} ({inc.severity})
-                </option>
-              ))}
-            </select>
-          ) : (
-            <span className="text-muted text-sm">Aucun incident enregistré</span>
-          )}
+      {/* 2. Main Workspace */}
+      <div className="tactical-workspace">
+        {/* Top Operations Bar */}
+        <TopBar
+          incidents={incidents}
+          selectedIncident={selectedIncident}
+          onSelectIncident={(inc) => {
+            setSelectedIncident(inc);
+            loadIncidentSubData(inc.id);
+          }}
+          onInspectIncident={() => setInspectModalOpen(true)}
+          currentUser={currentUser}
+          users={users}
+          onSelectUser={setCurrentUser}
+          wsConnected={wsConnected}
+          droneCount={drones.length || 3}
+        />
 
-          {selectedIncident && (
-            <span className={`status-badge-compact pill-${selectedIncident.status.toLowerCase()}`}>
-              {selectedIncident.status}
-            </span>
-          )}
-        </div>
-
-        <div className="selector-actions">
-          {selectedIncident && (
-            <button
-              className="btn btn-outline-primary btn-sm"
-              onClick={() => setInspectModalOpen(true)}
-            >
-              Inspecter l'incident #{selectedIncident.id}
-            </button>
-          )}
-          <span className="incidents-total-badge">
-            {incidents.length} incident{incidents.length > 1 ? 's' : ''}
-          </span>
-        </div>
-      </div>
-
-      {/* Main Workspace Navigation Tabs */}
-      <div className="nav-tabs-bar">
-        <button
-          className={`nav-tab-btn ${activeViewTab === 'map' ? 'active' : ''}`}
-          onClick={() => setActiveViewTab('map')}
-        >
-          <MapIcon size={16} />
-          <span>Carte Opérationnelle & Surveillance</span>
-        </button>
-
-        <button
-          className={`nav-tab-btn ${activeViewTab === 'aid' ? 'active' : ''}`}
-          onClick={() => setActiveViewTab('aid')}
-        >
-          <Package size={16} />
-          <span>Entraide Communautaire ({needs.length})</span>
-        </button>
-
-        <button
-          className={`nav-tab-btn ${activeViewTab === 'reforest' ? 'active' : ''}`}
-          onClick={() => setActiveViewTab('reforest')}
-        >
-          <TreePine size={16} />
-          <span>Reboisement & Parcelles ({zones.length})</span>
-        </button>
-      </div>
-
-      {/* Active View Container */}
-      <main className="main-content-view">
-        {activeViewTab === 'map' && (
-          <div className="map-view-layout">
-            <div className="map-column">
-              <LiveMap
-                incidents={incidents}
-                drones={drones}
-                selectedIncident={selectedIncident}
-                onSelectIncident={(inc) => {
-                  setSelectedIncident(inc);
-                  loadIncidentSubData(inc.id);
-                  setInspectModalOpen(true);
-                }}
-                zones={zones}
-                selectedZone={selectedZone}
-                onSelectZone={(z) => {
-                  setSelectedZone(z);
-                  setActiveViewTab('reforest');
-                }}
-              />
+        {/* Content View */}
+        <main className="tactical-content">
+          {activeViewTab === 'map' && (
+            <div className="map-view-layout">
+              <div className="map-column">
+                <LiveMap
+                  incidents={incidents}
+                  drones={drones}
+                  selectedIncident={selectedIncident}
+                  onSelectIncident={(inc) => {
+                    setSelectedIncident(inc);
+                    loadIncidentSubData(inc.id);
+                    setInspectModalOpen(true);
+                  }}
+                  zones={zones}
+                  selectedZone={selectedZone}
+                  onSelectZone={(z) => {
+                    setSelectedZone(z);
+                    setActiveViewTab('reforest');
+                  }}
+                />
+              </div>
+              <div className="side-column">
+                <SidePanel events={events} onClearEvents={() => setEvents([])} />
+              </div>
             </div>
-            <div className="side-column">
-              <SidePanel events={events} onClearEvents={() => setEvents([])} />
+          )}
+
+          {activeViewTab === 'aid' && (
+            <div className="subview-layout">
+              {selectedIncident ? (
+                <MutualAidBoard
+                  incidentId={selectedIncident.id}
+                  needs={needs}
+                  currentUser={currentUser}
+                  onNeedCreated={(newNeed) => setNeeds((prev) => [...prev, newNeed])}
+                  onNeedClaimed={(updatedNeed) =>
+                    setNeeds((prev) => prev.map((n) => (n.id === updatedNeed.id ? updatedNeed : n)))
+                  }
+                />
+              ) : (
+                <div className="empty-selection-placeholder">
+                  Veuillez sélectionner un incident dans la barre supérieure.
+                </div>
+              )}
             </div>
-          </div>
-        )}
+          )}
 
-        {activeViewTab === 'aid' && (
-          <div className="subview-layout">
-            {selectedIncident ? (
-              <MutualAidBoard
-                incidentId={selectedIncident.id}
-                needs={needs}
-                currentUser={currentUser}
-                onNeedCreated={(newNeed) => setNeeds((prev) => [...prev, newNeed])}
-                onNeedClaimed={(updatedNeed) =>
-                  setNeeds((prev) => prev.map((n) => (n.id === updatedNeed.id ? updatedNeed : n)))
-                }
-              />
-            ) : (
-              <div className="p-8 text-center text-muted">Veuillez sélectionner un incident.</div>
-            )}
-          </div>
-        )}
-
-        {activeViewTab === 'reforest' && (
-          <div className="subview-layout">
-            {selectedIncident ? (
-              <ReforestationPanel
-                incidentId={selectedIncident.id}
-                zones={zones}
-                selectedZone={selectedZone}
-                onSelectZone={setSelectedZone}
-                currentUser={currentUser}
-                onZoneUpdated={(updatedZone) =>
-                  setZones((prev) => prev.map((z) => (z.id === updatedZone.id ? updatedZone : z)))
-                }
-              />
-            ) : (
-              <div className="p-8 text-center text-muted">Veuillez sélectionner un incident.</div>
-            )}
-          </div>
-        )}
-      </main>
+          {activeViewTab === 'reforest' && (
+            <div className="subview-layout">
+              {selectedIncident ? (
+                <ReforestationPanel
+                  incidentId={selectedIncident.id}
+                  zones={zones}
+                  selectedZone={selectedZone}
+                  onSelectZone={setSelectedZone}
+                  currentUser={currentUser}
+                  onZoneUpdated={(updatedZone) =>
+                    setZones((prev) => prev.map((z) => (z.id === updatedZone.id ? updatedZone : z)))
+                  }
+                />
+              ) : (
+                <div className="empty-selection-placeholder">
+                  Veuillez sélectionner un incident dans la barre supérieure.
+                </div>
+              )}
+            </div>
+          )}
+        </main>
+      </div>
 
       {/* Incident Details & Verification Modal */}
       {inspectModalOpen && selectedIncident && (
