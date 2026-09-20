@@ -34,16 +34,6 @@ export const TopBar: React.FC<TopBarProps> = ({
     }
   };
 
-  const getRoleLabelFr = (role: string) => {
-    switch (role) {
-      case 'COORDINATOR': return 'Coordinateur de Crise';
-      case 'COMMITTEE_HEAD': return 'Chef Comité Tajmaât';
-      case 'VOLUNTEER': return 'Bénévole Communautaire';
-      case 'ECO_CLUB': return 'Club Éco & Reboisement';
-      default: return role;
-    }
-  };
-
   return (
     <header className="tactical-topbar">
       {/* Left: Incident Quick Selector */}
@@ -64,7 +54,7 @@ export const TopBar: React.FC<TopBarProps> = ({
             >
               {incidents.map((inc) => (
                 <option key={inc.id} value={inc.id}>
-                  #{inc.id} [{inc.status}] — {inc.droneId} ({inc.severity})
+                  #{inc.id} • {inc.droneId} ({inc.severity})
                 </option>
               ))}
             </select>
@@ -85,7 +75,7 @@ export const TopBar: React.FC<TopBarProps> = ({
             onClick={onInspectIncident}
             title="Inspecter les détails et valider l'alerte"
           >
-            <span>Détails & Actions #{selectedIncident.id}</span>
+            <span>Inspecter #{selectedIncident.id}</span>
             <span className="inspect-arrow">→</span>
           </button>
         )}
@@ -95,12 +85,12 @@ export const TopBar: React.FC<TopBarProps> = ({
       <div className="topbar-center">
         <div className="telemetry-pill">
           <span className="telemetry-live-dot amber" />
-          <span>{droneCount} Drones en Vol</span>
+          <span>{droneCount} Drones</span>
         </div>
 
         <div className="ws-indicator-pill">
           <span className={`ws-dot-pulse ${wsConnected ? 'online' : 'offline'}`} />
-          <span>{wsConnected ? 'Temps Réel Connecté' : 'Hors-ligne'}</span>
+          <span>{wsConnected ? 'Temps réel' : 'Hors-ligne'}</span>
         </div>
       </div>
 
@@ -118,7 +108,7 @@ export const TopBar: React.FC<TopBarProps> = ({
           >
             {users.map((u) => (
               <option key={u.id} value={u.id}>
-                {u.name} ({getRoleLabelFr(u.role)})
+                {u.name}
               </option>
             ))}
           </select>
