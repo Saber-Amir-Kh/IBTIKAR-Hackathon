@@ -7,6 +7,42 @@ class BaseDetector:
     def detect(self, frame: np.ndarray) -> List[Dict[str, Any]]:
         raise NotImplementedError
 
+def normalize_illumination(frame: np.ndarray, mean_luma: float) -> np.ndarray:
+    """
+    Normalizes illumination extremes (bright chamber lights, glare, and low-light darkness).
+    Operates in LAB color space to preserve genuine flame chroma (A & B channels)
+    while stabilizing luminance (L channel) via adaptive CLAHE and highlight gamma correction.
+    """
+    if frame is None or frame.size == 0:
+        return frame
+
+    lab = cv2.cvtColor(frame, cv2.COLOR_BGR2LAB)
+    l, a, b = cv2.split(lab)
+
+    # Adaptive CLAHE clip limit based on ambient lighting
+    if mean_luma > 130:
+        clip_limit = 2.4  # Suppresses glare and restores washed-out flame edges
+    elif mean_luma < 65:
+        clip_limit = 1.8  # Opens up dim shadows without amplifying noise
+    else:
+        clip_limit = 2.0
+
+    clahe = cv2.createCLAHE(clipLimit=clip_limit, tileGridSize=(8, 8))
+    l_norm = clahe.apply(l)
+
+    # Highlight gamma compression when room light is ON
+    if mean_luma > 140:
+        inv_gamma = 1.0 / 1.16
+        table = np.array([((i / 255.0) ** inv_gamma) * 255 for i in range(256)]).astype(np.uint8)
+        l_norm = cv2.LUT(l_norm, table)
+    elif mean_luma < 50:
+        inv_gamma = 1.0 / 0.88
+        table = np.array([((i / 255.0) ** inv_gamma) * 255 for i in range(256)]).astype(np.uint8)
+        l_norm = cv2.LUT(l_norm, table)
+
+    merged = cv2.merge([l_norm, a, b])
+    return cv2.cvtColor(merged, cv2.COLOR_LAB2BGR)
+
 class HeuristicFireDetector(BaseDetector):
     """
     Precision flame & smoke detector with skin-tone rejection and high-luminosity gating.
@@ -22,29 +58,34 @@ class HeuristicFireDetector(BaseDetector):
         h, w = frame.shape[:2]
         detections = []
 
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        mean_luma = float(np.mean(gray))
+
         # 1. YCrCb Skin Tone Rejection Mask
-        # Standard Kovacs/Chai human skin chrominance range: Cr in [133, 173], Cb in [77, 127]
         ycrcb = cv2.cvtColor(frame, cv2.COLOR_BGR2YCrCb)
         _, cr, cb = cv2.split(ycrcb)
         skin_mask = (cr >= 133) & (cr <= 175) & (cb >= 75) & (cb <= 127)
 
-        # 2. HSV & RGB Flame Mask (Requires high luminosity and intense heat saturation)
+        # 2. HSV & RGB Flame Mask with adaptive saturation for bright room lighting
         hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
         b, g, r = cv2.split(frame)
 
-        # Flame detection: sensitive to photos and screens (V >= 160, S >= 90)
-        lower_fire1 = np.array([0, 90, 160])
+        min_s = 65 if mean_luma > 120 else 85
+        min_v = 150 if mean_luma > 120 else 160
+
+        lower_fire1 = np.array([0, min_s, min_v])
         upper_fire1 = np.array([35, 255, 255])
         mask1 = cv2.inRange(hsv, lower_fire1, upper_fire1)
 
-        lower_fire2 = np.array([160, 90, 160])
+        lower_fire2 = np.array([160, min_s, min_v])
         upper_fire2 = np.array([180, 255, 255])
         mask2 = cv2.inRange(hsv, lower_fire2, upper_fire2)
 
         fire_hsv = cv2.bitwise_or(mask1, mask2)
 
-        # Flame rule: R channel prominence over G and B with sensitivity for image displays
-        flame_rgb_rule = (r > 165) & (r > (g.astype(np.int16) + 15)) & (g > b)
+        # Flame rule: R channel prominence over G and B adapted to ambient lighting
+        diff = 8 if mean_luma > 120 else 15
+        flame_rgb_rule = (r > 150) & (r > (g.astype(np.int16) + diff)) & (g > b)
         fire_mask = cv2.bitwise_and(fire_hsv, fire_hsv, mask=flame_rgb_rule.astype(np.uint8) * 255)
 
         # Remove skin pixels completely
@@ -82,6 +123,7 @@ class YOLOv8FireDetector(BaseDetector):
     """
     Dedicated Deep Neural Network detector using fine-tuned weights (fire_yolov8n.pt).
     Directly detects 'fire' and 'smoke' without hallucinating on skin or background objects.
+    Features dual-illumination inference to remain accurate under both high-brightness and low-light.
     """
     def __init__(self, model_path: str = "fire_yolov8n.pt"):
         self.model = None
@@ -114,27 +156,75 @@ class YOLOv8FireDetector(BaseDetector):
             print(f"[YOLO] Initialization error: {e}")
             self.is_loaded = False
 
+    def _run_model(self, frame: np.ndarray, conf_threshold: float) -> List[Dict[str, Any]]:
+        results = self.model(frame, verbose=False, conf=conf_threshold)
+        detections = []
+        for r in results:
+            for box in r.boxes:
+                cls_id = int(box.cls[0].item())
+                cls_name = r.names.get(cls_id, "").lower()
+                conf = float(box.conf[0].item())
+
+                if "fire" in cls_name or "smoke" in cls_name or "flame" in cls_name:
+                    x1, y1, x2, y2 = [int(v) for v in box.xyxy[0].tolist()]
+                    detections.append({
+                        "label": "fire" if ("fire" in cls_name or "flame" in cls_name) else "smoke",
+                        "confidence": round(conf, 3),
+                        "box": [x1, y1, x2, y2]
+                    })
+        return detections
+
+    def _merge_detections(self, detsA: List[Dict[str, Any]], detsB: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Merges two detection sets, choosing highest confidence for overlapping regions."""
+        if not detsA:
+            return detsB
+        if not detsB:
+            return detsA
+
+        merged = list(detsA)
+        for b_det in detsB:
+            b_box = b_det["box"]
+            matched = False
+            for i, a_det in enumerate(merged):
+                a_box = a_det["box"]
+                ix1, iy1 = max(a_box[0], b_box[0]), max(a_box[1], b_box[1])
+                ix2, iy2 = min(a_box[2], b_box[2]), min(a_box[3], b_box[3])
+                inter = max(0, ix2 - ix1) * max(0, iy2 - iy1)
+                areaA = (a_box[2] - a_box[0]) * (a_box[3] - a_box[1])
+                areaB = (b_box[2] - b_box[0]) * (b_box[3] - b_box[1])
+                iou = inter / float(areaA + areaB - inter) if (areaA + areaB - inter) > 0 else 0
+                io_min = inter / float(min(areaA, areaB)) if min(areaA, areaB) > 0 else 0
+
+                if iou >= 0.20 or io_min >= 0.30:
+                    matched = True
+                    if b_det["confidence"] > a_det["confidence"]:
+                        merged[i] = b_det
+                    break
+
+            if not matched:
+                merged.append(b_det)
+
+        merged.sort(key=lambda d: d["confidence"], reverse=True)
+        return merged
+
     def detect(self, frame: np.ndarray, conf_threshold: float = 0.28) -> List[Dict[str, Any]]:
         if not self.is_loaded or self.model is None or frame is None:
             return []
 
         try:
-            results = self.model(frame, verbose=False, conf=conf_threshold)
-            detections = []
-            for r in results:
-                for box in r.boxes:
-                    cls_id = int(box.cls[0].item())
-                    cls_name = r.names.get(cls_id, "").lower()
-                    conf = float(box.conf[0].item())
+            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            mean_luma = float(np.mean(gray))
 
-                    # Match fire or smoke classes
-                    if "fire" in cls_name or "smoke" in cls_name or "flame" in cls_name:
-                        x1, y1, x2, y2 = [int(v) for v in box.xyxy[0].tolist()]
-                        detections.append({
-                            "label": "fire" if ("fire" in cls_name or "flame" in cls_name) else "smoke",
-                            "confidence": round(conf, 3),
-                            "box": [x1, y1, x2, y2]
-                        })
+            # Run primary inference on raw frame
+            detections = self._run_model(frame, conf_threshold)
+
+            # If chamber light is ON (mean_luma > 120) or no strong detection found:
+            # Run illumination-normalized inference to recover contrast washed out by glare
+            if mean_luma > 120 or (not any(d["confidence"] >= 0.65 for d in detections) and mean_luma < 70):
+                norm_frame = normalize_illumination(frame, mean_luma)
+                norm_dets = self._run_model(norm_frame, conf_threshold)
+                detections = self._merge_detections(detections, norm_dets)
+
             return detections
         except Exception as e:
             print(f"[YOLO] Detection error: {e}")

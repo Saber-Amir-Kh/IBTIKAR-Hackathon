@@ -110,21 +110,56 @@ class SpatialFireTracker:
         self.sustained_seconds = sustained_seconds
         self.memory_grace_seconds = memory_grace_seconds
         self.confidence_threshold = confidence_threshold
+        self.current_effective_threshold = confidence_threshold
+        self.current_mean_luma = 80.0
         self.tracks: Dict[int, TrackedFireArea] = {}
         self.next_track_id = 1
 
-    def update(self, detections: List[Dict[str, Any]], now: Optional[float] = None) -> List[TrackedFireArea]:
+    def get_dynamic_threshold(self, mean_luma: Optional[float] = None) -> float:
+        """
+        Calculates dynamic confidence threshold based on ambient chamber lighting.
+        When room/chamber lights are turned ON (mean_luma > 105), camera exposure washes out
+        flame highlights and reduces contrast, lowering raw YOLO confidence slightly.
+        Dynamically scaling threshold from 0.70 down to ~0.58-0.62 prevents false negatives
+        while keeping strict suppression of false positives.
+        """
+        if mean_luma is None:
+            return self.confidence_threshold
+
+        if mean_luma >= 125.0:
+            # High brightness / Chamber light ON: scale down to 0.58
+            return round(max(0.58, self.confidence_threshold - 0.12), 2)
+        elif mean_luma > 100.0:
+            # Transition region: interpolate smoothly between 0.70 and 0.60
+            ratio = (mean_luma - 100.0) / 25.0
+            eff = self.confidence_threshold - (0.10 * ratio)
+            return round(max(0.60, eff), 2)
+        else:
+            # Normal or low-light: maintain standard high confidence
+            return self.confidence_threshold
+
+    def update(self, detections: List[Dict[str, Any]], now: Optional[float] = None, mean_luma: Optional[float] = None) -> List[TrackedFireArea]:
         if now is None:
             now = time.time()
 
-        # Qualifying detections: confidence >= CONFIDENCE_THRESHOLD (0.70)
-        qualifying = [d for d in detections if d.get("confidence", 0) >= self.confidence_threshold]
+        if mean_luma is not None:
+            self.current_mean_luma = mean_luma
+
+        effective_thresh = self.get_dynamic_threshold(mean_luma)
+        self.current_effective_threshold = effective_thresh
+
+        # Continuity threshold for sustaining existing active tracks (even through lighting dips)
+        continuity_thresh = max(0.48, effective_thresh - 0.10)
+
+        # Qualifying detections for new tracks (confidence >= effective_thresh)
+        # or for continuing existing tracks (confidence >= continuity_thresh)
+        candidate_dets = [d for d in detections if d.get("confidence", 0) >= continuity_thresh]
 
         matched_track_ids = set()
         unmatched_dets = []
 
         # Associate detections with existing tracks based on maximum spatial overlap
-        for det in qualifying:
+        for det in candidate_dets:
             best_track_id = None
             best_score = 0.0
             box = det["box"]
@@ -141,7 +176,9 @@ class SpatialFireTracker:
                 self.tracks[best_track_id].update(box, det["label"], det["confidence"], now)
                 matched_track_ids.add(best_track_id)
             else:
-                unmatched_dets.append(det)
+                # For spawning NEW tracks, enforce the full effective_thresh
+                if det.get("confidence", 0) >= effective_thresh:
+                    unmatched_dets.append(det)
 
         # For existing tracks that were not matched this frame:
         # Check if they are still within the memory grace period

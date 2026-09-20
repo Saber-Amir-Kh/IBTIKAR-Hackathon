@@ -4,6 +4,7 @@ import time
 import threading
 from datetime import datetime, timezone
 import cv2
+import numpy as np
 import requests
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
@@ -61,6 +62,8 @@ last_trigger_time = 0.0
 total_detections_fired = 0
 latest_detections = []
 latest_tracked_areas = []
+latest_mean_luma = 80.0
+latest_dynamic_threshold = CONFIDENCE_THRESHOLD
 latest_display_frame = None
 
 def post_to_spring_with_retries(payload: dict, max_retries: int = 3):
@@ -92,6 +95,9 @@ def health():
         areas_count = len(fire_tracker.tracks)
         dets_count = len(latest_detections)
         c_rem = max(0, int(COOLDOWN_SECONDS - (now - last_trigger_time)))
+        mean_l = round(latest_mean_luma, 1)
+        eff_th = fire_tracker.current_effective_threshold
+        l_mode = "ELEVEE (Chambre eclaree)" if mean_l >= 125 else ("BASSE (Sombre)" if mean_l < 60 else "NORMALE")
 
     return {
         "status": "healthy",
@@ -99,7 +105,10 @@ def health():
         "stream_url": STREAM_URL,
         "source_description": ingester.source_description,
         "is_real_camera": ingester.is_real_stream,
-        "confidence_threshold": CONFIDENCE_THRESHOLD,
+        "confidence_threshold_base": CONFIDENCE_THRESHOLD,
+        "dynamic_confidence_threshold": eff_th,
+        "ambient_luminance": mean_l,
+        "lighting_mode": l_mode,
         "sustained_seconds_target": SUSTAINED_SECONDS,
         "sustained_seconds_current": curr_sustained,
         "memory_grace_seconds": MEMORY_GRACE_SECONDS,
@@ -157,7 +166,7 @@ def start_fastapi():
 
 # ----------------- MAIN DESKTOP GUI & INFERENCE LOOP -----------------
 def main():
-    global last_trigger_time, total_detections_fired, latest_detections, latest_tracked_areas, latest_display_frame
+    global last_trigger_time, total_detections_fired, latest_detections, latest_tracked_areas, latest_display_frame, latest_mean_luma, latest_dynamic_threshold
 
     # Start FastAPI background server
     api_thread = threading.Thread(target=start_fastapi, daemon=True)
@@ -198,12 +207,17 @@ def main():
 
         # Run inference every FRAME_SKIP frames
         if frame_counter % FRAME_SKIP == 0:
+            gray = cv2.cvtColor(raw_frame, cv2.COLOR_BGR2GRAY)
+            mean_luma = float(np.mean(gray))
+
             detections = detector.detect(raw_frame)
-            tracked_areas = fire_tracker.update(detections, now)
+            tracked_areas = fire_tracker.update(detections, now, mean_luma=mean_luma)
 
             with state_lock:
                 latest_detections = detections
                 latest_tracked_areas = tracked_areas
+                latest_mean_luma = mean_luma
+                latest_dynamic_threshold = fire_tracker.current_effective_threshold
 
             # Check if any tracked area satisfies the 2.0s constraint!
             ready_areas = fire_tracker.get_ready_to_trigger_areas(cooldown_active)
@@ -243,10 +257,12 @@ def main():
             current_dets = list(latest_detections)
             current_areas = list(latest_tracked_areas)
             top_area = fire_tracker.get_highest_sustained_area()
+            curr_eff_thresh = fire_tracker.current_effective_threshold
+            curr_luma = latest_mean_luma
 
-        # 1. Draw raw low-confidence candidate detections (below threshold)
+        # 1. Draw raw low-confidence candidate detections (below dynamic threshold)
         for d in current_dets:
-            if d.get("confidence", 0) < CONFIDENCE_THRESHOLD:
+            if d.get("confidence", 0) < curr_eff_thresh:
                 b = d["box"]
                 cv2.rectangle(display_frame, (b[0], b[1]), (b[2], b[3]), (100, 100, 100), 1)
                 lbl = f"{d['label']}: {d['confidence']*100:.0f}%"
@@ -297,8 +313,10 @@ def main():
         # Top OSD Bar
         cv2.rectangle(display_frame, (0, 0), (w, 36), (15, 23, 42), -1)
         src_color = (0, 255, 128) if ingester.is_real_stream else (0, 180, 255)
-        cv2.putText(display_frame, f"SOURCE: {ingester.source_description.upper()} | CONTRAINTE ZONE: >={int(CONFIDENCE_THRESHOLD*100)}% ({SUSTAINED_SECONDS:.1f}s) | MEMOIRE: {MEMORY_GRACE_SECONDS:.1f}s", (12, 24),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.45, src_color, 1, cv2.LINE_AA)
+        luma_mode_tag = "LUM: ELEVEE" if curr_luma >= 125 else ("LUM: BASSE" if curr_luma < 60 else "LUM: NORMALE")
+        osd_text = f"SOURCE: {ingester.source_description.upper()} | {luma_mode_tag} (L={int(curr_luma)}) | SEUIL: >={int(curr_eff_thresh*100)}% ({SUSTAINED_SECONDS:.1f}s) | MEM: {MEMORY_GRACE_SECONDS:.1f}s"
+        cv2.putText(display_frame, osd_text, (12, 24),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.43, src_color, 1, cv2.LINE_AA)
         cv2.putText(display_frame, datetime.now().strftime("%Y-%m-%d %H:%M:%S"), (w - 185, 24),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.48, (220, 220, 220), 1, cv2.LINE_AA)
 
