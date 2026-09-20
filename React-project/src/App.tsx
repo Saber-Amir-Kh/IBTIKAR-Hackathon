@@ -34,6 +34,19 @@ const DEFAULT_USERS: User[] = [
   { id: 4, name: 'Tarek Benali', role: 'ECO_CLUB' },
 ];
 
+const getInitialView = (): 'landing' | 'dashboard' => {
+  const path = window.location.pathname.toLowerCase();
+  const hash = window.location.hash.toLowerCase();
+  if (path === '/dashboard' || path === '/app' || hash === '#dashboard') {
+    return 'dashboard';
+  }
+  const saved = localStorage.getItem('sentinelle_route');
+  if (saved === 'dashboard') {
+    return 'dashboard';
+  }
+  return 'landing';
+};
+
 export const App: React.FC = () => {
   const [users, setUsers] = useState<User[]>(DEFAULT_USERS);
   const [currentUser, setCurrentUser] = useState<User>(DEFAULT_USERS[0]);
@@ -50,7 +63,33 @@ export const App: React.FC = () => {
   const [isResetting, setIsResetting] = useState(false);
   const [inspectModalOpen, setInspectModalOpen] = useState(false);
   const [showDemoTools, setShowDemoTools] = useState(false);
-  const [currentView, setCurrentView] = useState<'landing' | 'dashboard'>('landing');
+  const [currentView, setCurrentView] = useState<'landing' | 'dashboard'>(getInitialView);
+
+  const navigateTo = (view: 'landing' | 'dashboard') => {
+    setCurrentView(view);
+    localStorage.setItem('sentinelle_route', view);
+    if (view === 'dashboard') {
+      if (window.location.pathname !== '/dashboard') {
+        window.history.pushState({ view: 'dashboard' }, '', '/dashboard');
+      }
+    } else {
+      if (window.location.pathname !== '/') {
+        window.history.pushState({ view: 'landing' }, '', '/');
+      }
+    }
+  };
+
+  useEffect(() => {
+    const onPopState = () => {
+      const isDashboard = window.location.pathname === '/dashboard' || window.location.hash === '#dashboard';
+      const target = isDashboard ? 'dashboard' : 'landing';
+      setCurrentView(target);
+      localStorage.setItem('sentinelle_route', target);
+    };
+
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, []);
 
   const wsRef = useRef<WebSocket | null>(null);
 
@@ -258,7 +297,7 @@ export const App: React.FC = () => {
   };
 
   if (currentView === 'landing') {
-    return <LandingPage onEnterPlatform={() => setCurrentView('dashboard')} />;
+    return <LandingPage onEnterPlatform={() => navigateTo('dashboard')} />;
   }
 
   return (
@@ -271,7 +310,7 @@ export const App: React.FC = () => {
         zonesCount={zones.length}
         showDemoTools={showDemoTools}
         onToggleDemoTools={() => setShowDemoTools((prev) => !prev)}
-        onBackToLanding={() => setCurrentView('landing')}
+        onBackToLanding={() => navigateTo('landing')}
       />
 
       {/* 2. Main Workspace */}

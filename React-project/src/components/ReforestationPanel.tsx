@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import type { PlantingZone, User } from '../types';
 import { registerVolunteer, plantTrees } from '../api';
+import { EcoParcelIcon, BrigadeIcon } from './TacticalIcons';
 
 interface ReforestationPanelProps {
   incidentId: number;
@@ -63,12 +64,14 @@ export const ReforestationPanel: React.FC<ReforestationPanelProps> = ({
         </div>
       </div>
 
-      {/* Global Campaign Progress Card (Clean Minimal Metrics, No Clipart Icons) */}
+      {/* Global Campaign Progress Card with Professional Badges */}
       <div className="campaign-summary-card">
         <div className="summary-metric">
-          <div className="metric-accent-bar metric-bar-green" />
+          <div className="metric-icon-badge badge-green">
+            <EcoParcelIcon size={22} color="#4ade80" />
+          </div>
           <div className="metric-details">
-            <span className="metric-category-tag tag-green">PLANTATIONS</span>
+            <span className="metric-category-tag tag-green">RESTAURATION ÉCOLOGIQUE</span>
             <div className="metric-val">
               {totalPlanted.toLocaleString()}{' '}
               <span className="metric-target-val">/ {totalTarget.toLocaleString()}</span>
@@ -78,11 +81,13 @@ export const ReforestationPanel: React.FC<ReforestationPanelProps> = ({
         </div>
 
         <div className="summary-metric">
-          <div className="metric-accent-bar metric-bar-blue" />
+          <div className="metric-icon-badge badge-blue">
+            <BrigadeIcon size={22} color="#38bdf8" />
+          </div>
           <div className="metric-details">
-            <span className="metric-category-tag tag-blue">MOBILISATION</span>
-            <div className="metric-val">{totalVolunteers}</div>
-            <div className="metric-lbl">Bénévoles mobilisés</div>
+            <span className="metric-category-tag tag-blue">MOBILISATION BRIGADES</span>
+            <div className="metric-val">{totalVolunteers} Volontaires</div>
+            <div className="metric-lbl">Citoyens & clubs mobilisés</div>
           </div>
         </div>
 
@@ -116,7 +121,7 @@ export const ReforestationPanel: React.FC<ReforestationPanelProps> = ({
             >
               <div className="zone-card-top">
                 <div className="zone-name-wrap">
-                  <span className={`zone-status-dot ${zonePct >= 100 ? 'dot-green' : 'dot-amber'}`} />
+                  <EcoParcelIcon size={16} color={zonePct >= 100 ? '#4ade80' : '#fbbf24'} />
                   <span className="zone-name">{zone.name}</span>
                 </div>
                 <span className={`zone-status-badge ${zone.status.toLowerCase()}`}>

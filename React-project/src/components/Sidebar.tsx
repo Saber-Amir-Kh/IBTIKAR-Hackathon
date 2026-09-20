@@ -1,4 +1,11 @@
 import React from 'react';
+import {
+  RadarScopeIcon,
+  TouizaReliefIcon,
+  EcoParcelIcon,
+  SimPulseIcon,
+  PortalReturnIcon,
+} from './TacticalIcons';
 
 interface SidebarProps {
   activeTab: 'map' | 'aid' | 'reforest';
@@ -45,16 +52,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
       </div>
 
-      {/* Main Navigation Items (Clean Typographic Indices, No Clipart Icons) */}
+      {/* Main Navigation Items with Bespoke Tactical Icons */}
       <nav className="sidebar-nav">
         <button
           className={`sidebar-nav-btn ${activeTab === 'map' ? 'active' : ''}`}
           onClick={() => onSelectTab('map')}
           title="Carte Opérationnelle & Surveillance Drones"
         >
-          <span className="nav-index">01</span>
+          <div className="sidebar-icon-box">
+            <RadarScopeIcon size={18} />
+          </div>
           <span className="btn-label">Surveillance</span>
-          {activeTab === 'map' && <span className="active-dot" />}
         </button>
 
         <button
@@ -62,13 +70,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
           onClick={() => onSelectTab('aid')}
           title="Entraide Communautaire (Touiza)"
         >
-          <span className="nav-index">02</span>
+          <div className="sidebar-icon-box">
+            <TouizaReliefIcon size={18} />
+          </div>
           <span className="btn-label">Entraide Touiza</span>
-          {needsCount > 0 ? (
-            <span className="nav-badge">{needsCount}</span>
-          ) : (
-            activeTab === 'aid' && <span className="active-dot" />
-          )}
+          {needsCount > 0 && <span className="nav-badge">{needsCount}</span>}
         </button>
 
         <button
@@ -76,33 +82,31 @@ export const Sidebar: React.FC<SidebarProps> = ({
           onClick={() => onSelectTab('reforest')}
           title="Campagne de Reboisement & Parcelles"
         >
-          <span className="nav-index">03</span>
+          <div className="sidebar-icon-box">
+            <EcoParcelIcon size={18} />
+          </div>
           <span className="btn-label">Reboisement</span>
-          {zonesCount > 0 ? (
-            <span className="nav-badge green">{zonesCount}</span>
-          ) : (
-            activeTab === 'reforest' && <span className="active-dot" />
-          )}
+          {zonesCount > 0 && <span className="nav-badge green">{zonesCount}</span>}
         </button>
       </nav>
 
-      {/* Bottom Utility Actions (Simple, Clean, Typographic) */}
+      {/* Bottom Utility Actions */}
       <div className="sidebar-footer">
         <button
           className={`sidebar-util-btn ${showDemoTools ? 'active-demo' : ''}`}
           onClick={onToggleDemoTools}
           title="Panneau de simulation de feux factices"
         >
-          <span className="util-bullet sim-bullet">●</span>
+          <SimPulseIcon size={15} className={showDemoTools ? 'text-amber' : ''} />
           <span>Simulation Démo</span>
         </button>
 
         <button
           className="sidebar-util-btn"
           onClick={onBackToLanding}
-          title="Retour à la page vitrine"
+          title="Retour au site vitrine"
         >
-          <span className="util-bullet">←</span>
+          <PortalReturnIcon size={15} />
           <span>Site Vitrine</span>
         </button>
       </div>
