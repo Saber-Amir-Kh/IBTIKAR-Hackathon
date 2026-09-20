@@ -39,39 +39,32 @@ export const LiveMap: React.FC<LiveMapProps> = ({
       zoomControl: true,
     });
 
-    // 1. Dark Tactical Map (Esri Dark Gray - 100% Free, NO WATERMARK, NO API KEY)
-    const darkBase = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
-      attribution: '&copy; Esri, DeLorme, NAVTEQ',
-      maxNativeZoom: 16,
+    // 1. Standard Streets Map (Light, clear roads and cities - 100% Free, NO WATERMARK, NO API KEY)
+    const streetMap = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
+      attribution: '&copy; Esri &mdash; Sources: Esri, HERE, Garmin, USGS, Intermap, INCREMENT P, NRCan, Esri Japan, METI, Esri China (Hong Kong), Esri Korea, Esri (Thailand), NGCC, (c) OpenStreetMap contributors, and the GIS User Community',
       maxZoom: 19,
     });
-    const darkLabels = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}', {
-      attribution: '',
-      maxNativeZoom: 16,
-      maxZoom: 19,
-    });
-    const darkTactical = L.layerGroup([darkBase, darkLabels]);
 
-    // 2. Satellite HD Map (Esri World Imagery - 100% Free, NO WATERMARK)
+    // 2. Topographic Relief Map (Natural terrain with contours and vegetation - 100% Free, NO WATERMARK)
+    const topoMap = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', {
+      attribution: '&copy; Esri, USGS, NOAA',
+      maxZoom: 19,
+    });
+
+    // 3. Satellite HD Map (High-resolution aerial imagery - 100% Free, NO WATERMARK)
     const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
       attribution: '&copy; Esri, Maxar, Earthstar Geographics',
       maxZoom: 19,
     });
 
-    // 3. Topographic Relief Map (Esri World Topo - 100% Free, NO WATERMARK)
-    const topo = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', {
-      attribution: '&copy; Esri, USGS, NOAA',
-      maxZoom: 19,
-    });
+    // Set standard light map as default (NO DARK THEME)
+    streetMap.addTo(map);
 
-    // Add dark tactical layer group by default
-    darkTactical.addTo(map);
-
-    // Layer Switcher (Tactical Dark vs Satellite vs Topo)
+    // Layer Switcher (Streets vs Topo vs Satellite)
     const baseLayers = {
-      "Tactique (Sombre)": darkTactical,
+      "Carte Standard": streetMap,
+      "Topographique": topoMap,
       "Satellite HD": satellite,
-      "Topographique": topo,
     };
     L.control.layers(baseLayers, undefined, { position: 'topright' }).addTo(map);
 
