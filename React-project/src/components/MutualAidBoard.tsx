@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import type { Need, NeedCategory, User } from '../types';
 import { createNeed, claimNeed } from '../api';
+import { CustomSelect } from './CustomSelect';
 
 interface MutualAidBoardProps {
   incidentId: number;
@@ -127,13 +128,17 @@ export const MutualAidBoard: React.FC<MutualAidBoardProps> = ({
 
             <div className="form-group flex-1">
               <label>Catégorie :</label>
-              <select value={category} onChange={(e) => setCategory(e.target.value as NeedCategory)}>
-                <option value="WATER">Eau & Ravitaillement</option>
-                <option value="TOOLS">Outils & Pare-feu</option>
-                <option value="SAFETY">Sécurité & Masques</option>
-                <option value="TRANSPORT">Véhicules & Transport</option>
-                <option value="OTHER">Autre Soutien</option>
-              </select>
+              <CustomSelect
+                value={category}
+                onChange={(val) => setCategory(val as NeedCategory)}
+                options={[
+                  { value: 'WATER', label: 'Eau & Ravitaillement', icon: <span>💧</span> },
+                  { value: 'TOOLS', label: 'Outils & Pare-feu', icon: <span>🛠️</span> },
+                  { value: 'SAFETY', label: 'Sécurité & Masques', icon: <span>🦺</span> },
+                  { value: 'TRANSPORT', label: 'Véhicules & Transport', icon: <span>🚚</span> },
+                  { value: 'OTHER', label: 'Autre Soutien', icon: <span>📦</span> },
+                ]}
+              />
             </div>
 
             <div className="form-group flex-1">

@@ -12,6 +12,7 @@ import {
   AlertTriangle
 } from 'lucide-react';
 import type { Incident, IncidentStatus } from '../types';
+import { CustomSelect } from './CustomSelect';
 
 interface FireManagementPanelProps {
   incidents: Incident[];
@@ -192,20 +193,20 @@ export const FireManagementPanel: React.FC<FireManagementPanelProps> = ({
         </div>
 
         <div className="team-filter-wrap">
-          <Users size={15} className="team-icon" />
-          <select
-            className="team-filter-select"
+          <CustomSelect
             value={teamFilter}
-            onChange={(e) => setTeamFilter(e.target.value)}
-          >
-            <option value="ALL">Toutes les équipes</option>
-            <option value="UNASSIGNED">Non assigné (à déployer)</option>
-            {TEAMS.map((t) => (
-              <option key={t.id} value={t.name}>
-                {t.icon} {t.name}
-              </option>
-            ))}
-          </select>
+            onChange={(val) => setTeamFilter(val)}
+            icon={<Users size={15} />}
+            options={[
+              { value: 'ALL', label: 'Toutes les équipes', icon: <span>🛡️</span> },
+              { value: 'UNASSIGNED', label: 'Non assigné (à déployer)', icon: <AlertTriangle size={14} className="text-amber" /> },
+              ...TEAMS.map((t) => ({
+                value: t.name,
+                label: t.name,
+                icon: <span>{t.icon}</span>,
+              })),
+            ]}
+          />
         </div>
       </div>
 
@@ -284,18 +285,20 @@ export const FireManagementPanel: React.FC<FireManagementPanelProps> = ({
                     <Users size={13} />
                     <span>Équipe Déployée :</span>
                   </div>
-                  <select
-                    className="fire-team-select"
+                  <CustomSelect
+                    size="sm"
                     value={currentTeam || ''}
-                    onChange={(e) => onAssignTeam(inc.id, e.target.value)}
-                  >
-                    <option value="">-- Assigner une équipe d'intervention --</option>
-                    {TEAMS.map((t) => (
-                      <option key={t.id} value={t.name}>
-                        {t.icon} {t.name}
-                      </option>
-                    ))}
-                  </select>
+                    placeholder="-- Assigner une équipe d'intervention --"
+                    onChange={(val) => onAssignTeam(inc.id, val)}
+                    options={[
+                      { value: '', label: '-- Aucune équipe assignée --' },
+                      ...TEAMS.map((t) => ({
+                        value: t.name,
+                        label: t.name,
+                        icon: <span>{t.icon}</span>,
+                      })),
+                    ]}
+                  />
                 </div>
 
                 {/* Actions Toolbar */}

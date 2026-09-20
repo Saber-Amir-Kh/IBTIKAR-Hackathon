@@ -17,6 +17,7 @@ import {
   AlertTriangle
 } from 'lucide-react';
 import type { DroneTelemetry } from '../types';
+import { CustomSelect } from './CustomSelect';
 
 interface DroneManagementPanelProps {
   drones: DroneTelemetry[];
@@ -433,8 +434,8 @@ export const DroneManagementPanel: React.FC<DroneManagementPanelProps> = ({
 
       {/* Deploy New Drone Modal */}
       {showDeployModal && (
-        <div className="modal-backdrop" onClick={() => setShowDeployModal(false)}>
-          <div className="modal-dialog deploy-drone-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-overlay modal-backdrop" onClick={() => setShowDeployModal(false)}>
+          <div className="modal-card deploy-drone-modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <div className="modal-title-wrap">
                 <div className="title-icon-box">
@@ -465,17 +466,17 @@ export const DroneManagementPanel: React.FC<DroneManagementPanelProps> = ({
 
               <div className="form-group">
                 <label className="form-label">Secteur Stratégique (Préréglage)</label>
-                <select
-                  className="form-input"
+                <CustomSelect
                   value={newSector}
-                  onChange={(e) => handlePresetSelect(e.target.value)}
-                >
-                  {SECTOR_PRESETS.map((p) => (
-                    <option key={p.name} value={p.name}>
-                      {p.name}
-                    </option>
-                  ))}
-                </select>
+                  options={SECTOR_PRESETS.map((p) => ({
+                    value: p.name,
+                    label: p.name,
+                    icon: <MapPin size={14} className="text-cyan" />,
+                    sublabel: `${p.lat.toFixed(3)}°N, ${p.lon.toFixed(3)}°E • Alt: ${p.alt}m`
+                  }))}
+                  onChange={(val) => handlePresetSelect(val)}
+                  placeholder="Sélectionner un secteur stratégique..."
+                />
               </div>
 
               <div className="form-grid-2">

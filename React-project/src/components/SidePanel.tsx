@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Trash2, CheckCircle2, Eye, MapPin, Users, Flame } from 'lucide-react';
 import type { EventLogItem, Incident } from '../types';
+import { CustomSelect } from './CustomSelect';
 
 interface SidePanelProps {
   events: EventLogItem[];
@@ -200,19 +201,20 @@ export const SidePanel: React.FC<SidePanelProps> = ({
 
                       {/* Team Assignment Mini Row */}
                       <div className="side-fire-team-row">
-                        <Users size={11} />
-                        <select
-                          className="side-team-select"
+                        <CustomSelect
+                          size="sm"
                           value={currentTeam}
-                          onChange={(e) => onAssignTeam?.(inc.id, e.target.value)}
-                        >
-                          <option value="">-- Assigner équipe --</option>
-                          {TEAMS_LIST.map((name) => (
-                            <option key={name} value={name}>
-                              {name}
-                            </option>
-                          ))}
-                        </select>
+                          placeholder="-- Assigner équipe --"
+                          icon={<Users size={11} />}
+                          onChange={(val) => onAssignTeam?.(inc.id, val)}
+                          options={[
+                            { value: '', label: '-- Assigner équipe --' },
+                            ...TEAMS_LIST.map((name) => ({
+                              value: name,
+                              label: name,
+                            })),
+                          ]}
+                        />
                       </div>
 
                       {/* Action buttons */}

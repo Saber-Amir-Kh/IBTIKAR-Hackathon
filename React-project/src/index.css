@@ -2,6 +2,48 @@
   color-scheme: dark;
 }
 
+html,
+body {
+  color-scheme: dark;
+}
+
+/* ==========================================================================
+   Universal Form Controls & Dark Dropdown Fix
+   Ensures Windows / Chrome / Edge native controls never show white popups
+   ========================================================================== */
+select,
+option,
+optgroup,
+input,
+textarea {
+  color-scheme: dark !important;
+}
+
+select {
+  background-color: #12141e !important;
+  color: #f1f5f9 !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  border-radius: 8px !important;
+}
+
+select option,
+select optgroup {
+  background-color: #151824 !important;
+  color: #f1f5f9 !important;
+  padding: 8px 12px;
+}
+
+select option:checked {
+  background-color: #0284c7 !important;
+  color: #ffffff !important;
+}
+
+select option:hover,
+select option:focus {
+  background-color: #1e293b !important;
+  color: #38bdf8 !important;
+}
+
 html {
   scroll-behavior: smooth;
 }

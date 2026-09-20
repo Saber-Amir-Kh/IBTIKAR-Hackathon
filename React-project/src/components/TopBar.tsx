@@ -1,5 +1,6 @@
 import React from 'react';
 import type { Incident, User } from '../types';
+import { CustomSelect } from './CustomSelect';
 
 interface TopBarProps {
   incidents: Incident[];
@@ -43,21 +44,28 @@ export const TopBar: React.FC<TopBarProps> = ({
             Incident :
           </label>
           {incidents.length > 0 ? (
-            <select
-              id="top-incident-select"
-              className="topbar-select incident-select"
+            <CustomSelect
+              size="sm"
+              className="topbar-custom-select incident-select"
               value={selectedIncident?.id || ''}
-              onChange={(e) => {
-                const found = incidents.find((i) => i.id === Number(e.target.value));
+              placeholder="Choisir incident..."
+              onChange={(val) => {
+                const found = incidents.find((i) => i.id === Number(val));
                 if (found) onSelectIncident(found);
               }}
-            >
-              {incidents.map((inc) => (
-                <option key={inc.id} value={inc.id}>
-                  #{inc.id} • {inc.droneId} ({inc.severity})
-                </option>
-              ))}
-            </select>
+              options={incidents.map((inc) => ({
+                value: inc.id,
+                label: `#${inc.id} • ${inc.droneId}`,
+                badge: inc.severity,
+                badgeColor:
+                  inc.severity === 'HIGH'
+                    ? '#ef4444'
+                    : inc.severity === 'MEDIUM'
+                    ? '#f59e0b'
+                    : '#38bdf8',
+                sublabel: `${inc.lat.toFixed(3)}°N, ${inc.lon.toFixed(3)}°E`
+              }))}
+            />
           ) : (
             <span className="no-incident-tag">Aucun incident</span>
           )}
@@ -98,20 +106,28 @@ export const TopBar: React.FC<TopBarProps> = ({
       <div className="topbar-right">
         <div className="role-switcher-wrap">
           <span className="topbar-label">Rôle :</span>
-          <select
-            className="topbar-select user-select"
+          <CustomSelect
+            size="sm"
+            className="topbar-custom-select user-select"
             value={currentUser.id}
-            onChange={(e) => {
-              const selected = users.find((u) => u.id === Number(e.target.value));
+            onChange={(val) => {
+              const selected = users.find((u) => u.id === Number(val));
               if (selected) onSelectUser(selected);
             }}
-          >
-            {users.map((u) => (
-              <option key={u.id} value={u.id}>
-                {u.name}
-              </option>
-            ))}
-          </select>
+            options={users.map((u) => ({
+              value: u.id,
+              label: u.name,
+              badge: u.role,
+              badgeColor:
+                u.role === 'COORDINATOR'
+                  ? '#ef4444'
+                  : u.role === 'COMMITTEE_HEAD'
+                  ? '#f59e0b'
+                  : u.role === 'VOLUNTEER'
+                  ? '#38bdf8'
+                  : '#10b981'
+            }))}
+          />
           <span className={`role-tag ${getRoleBadgeColor(currentUser.role)}`}>
             {currentUser.role}
           </span>
