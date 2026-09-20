@@ -1,0 +1,363 @@
+================================================================
+ SENTINELLE — WILDFIRE EARLY WARNING & COORDINATION PLATFORM
+ System Documentation — Main Functionalities
+================================================================
+
+
+----------------------------------------------------------------
+1. REAL-TIME AI FIRE DETECTION
+----------------------------------------------------------------
+
+The system continuously analyzes a live camera feed (webcam or
+drone stream) using a fine-tuned YOLOv8 neural network trained
+specifically on fire and smoke datasets.
+
+Detection classes:
+  - SMOKE — early-stage fire indicators
+  - FIRE  — active flame detection
+
+Confirmation logic:
+  The AI does not raise an alert on a single frame. A detection
+  must be consistently present in the same spatial area for a
+  minimum of 2 continuous seconds at a confidence level of at
+  least 52% before any incident is created. This eliminates
+  flickers, reflections, and single-frame noise.
+
+Stutter memory:
+  If a confirmed fire zone briefly disappears from detection
+  (e.g., due to wind, camera motion, or frame drop), the system
+  holds the zone in memory for up to 0.8 seconds. If detection
+  resumes in the same area within that window, the 2-second
+  confirmation timer continues without resetting.
+
+Illumination adaptation:
+  The system automatically adjusts to changing lighting
+  conditions using CLAHE (Contrast Limited Adaptive Histogram
+  Equalization) in LAB color space. This allows reliable
+  detection in both bright daylight and low-light environments.
+
+False-positive rejection:
+  A skin-tone rejection filter analyzes every detection crop in
+  YCrCb and HSV color spaces. Any detection that contains more
+  than 22% skin-colored pixels in the upper portion of the frame
+  is automatically suppressed, preventing the AI from
+  misidentifying faces, hair, or human presence as smoke.
+
+
+----------------------------------------------------------------
+2. INCIDENT LIFECYCLE MANAGEMENT
+----------------------------------------------------------------
+
+Every confirmed fire detection creates an Incident — a
+structured record that tracks the fire from initial detection
+through resolution.
+
+Incident data includes:
+  - Unique incident ID
+  - GPS coordinates (latitude, longitude)
+  - Detection confidence percentage
+  - Drone or camera source identifier
+  - Severity level (LOW / MEDIUM / HIGH)
+  - Detection timestamp
+  - Snapshot image captured at moment of detection
+  - Assigned response team
+  - Current status
+
+Incident status state machine:
+
+  PENDING_VERIFICATION
+    The incident has been detected by the AI and is awaiting
+    human confirmation. No resources are deployed yet.
+
+  ACTIVE
+    A coordinator has confirmed the incident as a real fire.
+    Teams can be assigned and resources requested.
+
+  CONTAINED
+    The fire has been brought under control. The incident
+    remains visible for monitoring.
+
+  REFORESTATION
+    The affected area has been cleared for ecological recovery
+    and reforestation planning.
+
+  DISMISSED
+    The incident was reviewed and determined to be a false
+    positive or non-critical detection.
+
+Status transitions are enforced server-side. Only valid
+transitions are allowed. Every status change is broadcast in
+real time to all connected dashboards.
+
+
+----------------------------------------------------------------
+3. FIRE MANAGEMENT PANEL
+----------------------------------------------------------------
+
+The Fire Management Panel provides a full overview of all
+detected incidents with tools to manage, filter, and act.
+
+Features:
+
+  KPI Summary Bar
+    Displays live counts of incidents in each status category:
+    Pending, Active, Contained, and Dismissed. Clicking a
+    category filters the list to that status.
+
+  Search
+    Full-text search across incident ID, drone source, team
+    assignment, and location label.
+
+  Team Filter
+    Filter the incident list by assigned response team or show
+    only unassigned incidents requiring deployment.
+
+  Incident Cards
+    Each fire is displayed as a card showing:
+      - Snapshot thumbnail from the moment of detection
+      - Incident ID and current status badge
+      - GPS coordinates
+      - Source drone/camera identifier
+      - Detection confidence percentage
+      - Detection timestamp
+      - Assigned team (if any)
+
+  Per-card Actions
+    - Inspect: Open the full incident detail modal
+    - Map: Jump to the incident location on the live map
+    - Confirm (Garder): Promote from PENDING to ACTIVE
+    - Delete: Remove the incident from the system
+
+  Team Assignment
+    Each incident card has a dropdown to assign one of the
+    five available response teams directly from the list view.
+
+
+----------------------------------------------------------------
+4. TEAM ASSIGNMENT & DEPLOYMENT
+----------------------------------------------------------------
+
+The platform supports five operational team types reflecting
+Algeria's actual ground response structures:
+
+  - Protection Civile (Sapeurs-Pompiers)
+      Official firefighting and civil protection forces.
+
+  - Comite Tajmaat (Chefs de Village)
+      Traditional village council leadership responsible for
+      local coordination and community mobilization.
+
+  - Brigade Benevoles Touiza
+      Volunteer brigades organized through the national
+      solidarity network.
+
+  - Club Ecologique & Reboisement
+      Environmental clubs focused on forest protection and
+      post-fire ecological restoration.
+
+  - Equipe Telepilotes Surveillance
+      Drone pilot teams responsible for aerial reconnaissance
+      and real-time fire monitoring.
+
+Teams are assigned to incidents from the Fire Management Panel.
+Assignment is recorded and visible across all role views in
+real time.
+
+
+----------------------------------------------------------------
+5. DRONE MANAGEMENT PANEL
+----------------------------------------------------------------
+
+The Drone Management Panel displays the full fleet of active
+drones with live telemetry and status tracking.
+
+Per-drone information:
+  - Drone identifier
+  - Current operational status
+  - Battery level percentage
+  - GPS position (latitude, longitude)
+  - Altitude in meters
+  - Current speed
+  - Signal strength
+  - Linked incident (if assigned)
+
+Drone status types:
+  - PATROL_ACTIVE  — drone is conducting active area patrol
+  - HOVER_SCAN     — drone is hovering over a point of interest
+  - RETURN_TO_HOME — drone is returning to base
+  - CHARGING       — drone is at base and charging
+  - STANDBY        — drone is ready and awaiting deployment
+
+Actions available per drone:
+  - Assign to incident
+  - Mark as standby
+  - Request return to home
+
+
+----------------------------------------------------------------
+6. LIVE MAP VIEW
+----------------------------------------------------------------
+
+The live map provides a real-time geographic picture of all
+active incidents and drone positions.
+
+Features:
+
+  Incident Pins
+    Each confirmed fire is pinned on the map at its exact GPS
+    coordinates. Pins are color-coded by severity (LOW, MEDIUM,
+    HIGH). Clicking a pin opens the incident summary.
+
+  Drone Positions
+    Drone locations are overlaid on the map and update in real
+    time as telemetry data arrives.
+
+  Map Filter
+    Toggle between showing all incidents or active incidents
+    only to reduce visual clutter during high-activity periods.
+
+  Navigate from Fire Panel
+    Clicking "Map" on any fire card in the management panel
+    automatically centers the map on that incident's location.
+
+
+----------------------------------------------------------------
+7. ROLE-BASED ACCESS
+----------------------------------------------------------------
+
+The platform supports four distinct user roles, each with a
+tailored view and set of permissions:
+
+  COORDINATOR
+    Full access to all panels, all incidents, all drone data,
+    team assignment, and system controls.
+
+  COMMITTEE_HEAD (Chefs de Village)
+    Access to incident details relevant to their zone,
+    team deployment visibility, and mutual aid board.
+
+  VOLUNTEER
+    View assigned incidents and team instructions. Limited
+    write access.
+
+  ECO_CLUB
+    Access to reforestation planning zones and post-fire
+    ecological recovery tools.
+
+The active role is selected from the top bar and affects the
+interface view accordingly. Four test personas are available
+for demonstration purposes.
+
+
+----------------------------------------------------------------
+8. INCIDENT DETAIL MODAL
+----------------------------------------------------------------
+
+Clicking "Inspect" on any incident opens a full detail modal
+containing:
+
+  - Full incident metadata (ID, status, severity, coordinates,
+    timestamps, source drone, confidence score)
+  - Snapshot image captured at detection time
+  - Assigned team details
+  - Resource needs associated with this incident
+  - Available actions to update status or assign resources
+  - Timeline of status changes
+
+
+----------------------------------------------------------------
+9. MUTUAL AID BOARD
+----------------------------------------------------------------
+
+The Mutual Aid Board allows teams and coordinators to post
+resource needs and offers across incidents and zones.
+
+Needs can include:
+  - Water tankers
+  - Personnel
+  - Equipment (tools, vehicles, protective gear)
+  - Medical support
+  - Food and supplies for field teams
+
+Each need is linked to a specific incident, has a quantity,
+a priority level, and a status (OPEN / CLAIMED / FULFILLED).
+
+Teams can claim a need to indicate they are responding to it.
+The board updates in real time for all connected users.
+
+
+----------------------------------------------------------------
+10. REFORESTATION PLANNING PANEL
+----------------------------------------------------------------
+
+After a fire is contained, the system supports the transition
+to ecological recovery through the Reforestation Panel.
+
+Features:
+  - Define planting zones linked to contained incidents
+  - Track the area affected in hectares
+  - Assign responsible eco-club teams
+  - Monitor restoration status (PLANNED / IN_PROGRESS / DONE)
+  - Log species and planting density targets
+
+
+----------------------------------------------------------------
+11. EVENT JOURNAL (AUDIT LOG)
+----------------------------------------------------------------
+
+All system events are recorded in a real-time event journal
+accessible from the top navigation bar.
+
+Logged events include:
+  - New incident detections
+  - Status changes (confirmed, contained, dismissed)
+  - Team assignments
+  - Drone status changes
+  - Mutual aid need claims
+  - User role switches
+
+The journal displays the last 50 events, newest first, and
+updates automatically via WebSocket.
+
+
+----------------------------------------------------------------
+12. REAL-TIME COMMUNICATION (WEBSOCKET)
+----------------------------------------------------------------
+
+All components of the dashboard are connected via a persistent
+WebSocket connection to the backend server.
+
+Events broadcast in real time:
+  - detection         — new fire zone confirmed by AI
+  - incident_updated  — any change to incident status or data
+  - incident_deleted  — incident removed from the system
+  - demo_reset        — full system state reset
+
+If the connection is lost, the frontend automatically attempts
+to reconnect. Connection status is visible at all times in the
+top bar (green pulse = connected, red = offline).
+
+
+----------------------------------------------------------------
+13. AI SERVICE HEALTH MONITORING
+----------------------------------------------------------------
+
+The Python AI service exposes a health endpoint that reports
+the current state of the detection pipeline:
+
+  - Service status (healthy / error)
+  - Active camera source name
+  - Base and dynamic confidence thresholds
+  - Current ambient luminance reading
+  - Lighting mode (normal / elevated)
+  - Number of tracked fire zones
+  - Total detections fired in session
+  - Cooldown status
+
+This endpoint can be queried for diagnostics at:
+  http://localhost:8001/health
+
+
+----------------------------------------------------------------
+END OF DOCUMENTATION
+================================================================
