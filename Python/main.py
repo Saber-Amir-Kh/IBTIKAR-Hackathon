@@ -23,9 +23,9 @@ STREAM_URL = clean_stream
 
 SPRING_URL = os.getenv("SPRING_URL", "http://localhost:8080")
 AI_PORT = int(os.getenv("AI_PORT", "8001"))
-CONFIDENCE_THRESHOLD = float(os.getenv("CONFIDENCE_THRESHOLD", "0.75"))
-SUSTAINED_FRAMES = int(os.getenv("SUSTAINED_FRAMES", "5"))
-COOLDOWN_SECONDS = float(os.getenv("COOLDOWN_SECONDS", "60.0"))
+CONFIDENCE_THRESHOLD = float(os.getenv("CONFIDENCE_THRESHOLD", "0.70"))
+SUSTAINED_SECONDS = float(os.getenv("SUSTAINED_SECONDS", "2.0"))
+COOLDOWN_SECONDS = float(os.getenv("COOLDOWN_SECONDS", "15.0"))
 FRAME_SKIP = int(os.getenv("FRAME_SKIP", "2"))
 SNAPSHOTS_DIR = os.getenv("SNAPSHOTS_DIR", "./snapshots")
 
@@ -35,7 +35,7 @@ os.makedirs(SNAPSHOTS_DIR, exist_ok=True)
 app = FastAPI(
     title="Sentinelle Algérie — Microservice Vision IA",
     description="Capteur de vision par ordinateur pour détection de feux et fumées.",
-    version="1.2.0"
+    version="1.3.0"
 )
 
 app.add_middleware(
@@ -50,7 +50,9 @@ ingester = StreamIngester(STREAM_URL)
 detector = CompositeFireDetector()
 
 state_lock = threading.Lock()
-sustained_positive_count = 0
+fire_first_seen_time = None
+fire_last_seen_time = 0.0
+sustained_duration = 0.0
 last_trigger_time = 0.0
 total_detections_fired = 0
 latest_detections = []
@@ -78,14 +80,16 @@ def post_to_spring_with_retries(payload: dict, max_retries: int = 3):
 @app.get("/health")
 def health():
     now = time.time()
+    curr_sustained = round(now - fire_first_seen_time, 2) if fire_first_seen_time is not None else 0.0
     return {
         "status": "healthy",
         "service": "algeria-wildfire-ai-sensor",
         "stream_url": STREAM_URL,
         "source_description": ingester.source_description,
         "is_real_camera": ingester.is_real_stream,
-        "sustained_positive_count": sustained_positive_count,
-        "sustained_target": SUSTAINED_FRAMES,
+        "confidence_threshold": CONFIDENCE_THRESHOLD,
+        "sustained_seconds_target": SUSTAINED_SECONDS,
+        "sustained_seconds_current": curr_sustained,
         "total_detections_fired": total_detections_fired,
         "cooldown_remaining_sec": max(0, int(COOLDOWN_SECONDS - (now - last_trigger_time))),
         "detections_count": len(latest_detections)
@@ -138,7 +142,7 @@ def start_fastapi():
 
 # ----------------- MAIN DESKTOP GUI & INFERENCE LOOP -----------------
 def main():
-    global sustained_positive_count, last_trigger_time, total_detections_fired, latest_detections, latest_display_frame
+    global fire_first_seen_time, fire_last_seen_time, sustained_duration, last_trigger_time, total_detections_fired, latest_detections, latest_display_frame
 
     # Start FastAPI background server
     api_thread = threading.Thread(target=start_fastapi, daemon=True)
@@ -158,8 +162,9 @@ def main():
     print(f"  * Source vidéo     : {STREAM_URL} ({ingester.source_description})")
     print(f"  * Port serveur API : http://localhost:{AI_PORT}")
     print(f"  * Flux Web React   : http://localhost:{AI_PORT}/proxy_feed")
+    print(f"  * Seuil alerte     : >= {int(CONFIDENCE_THRESHOLD*100)}% pendant >= {SUSTAINED_SECONDS:.1f} secondes")
     print(f"  * Fenêtre OpenCV   : OUVERTE sur votre écran !")
-    print(f"  * Pour tester      : Allumez un briquet ou passez une vidéo de feu")
+    print(f"  * Pour tester      : Présentez une image de feu, briquet ou vidéo")
     print("="*70 + "\n")
 
     frame_counter = 0
@@ -178,19 +183,24 @@ def main():
             with state_lock:
                 latest_detections = detections
 
+            # Qualifying detections: confidence >= CONFIDENCE_THRESHOLD (0.70)
             qualifying = [d for d in detections if d["confidence"] >= CONFIDENCE_THRESHOLD]
             now = time.time()
             cooldown_remaining = max(0, int(COOLDOWN_SECONDS - (now - last_trigger_time)))
             cooldown_active = cooldown_remaining > 0
 
             if qualifying:
-                sustained_positive_count += 1
                 top_det = qualifying[0]
-                print(f"[IA Vision] FLAMME DÉTECTÉE ! Confiance: {top_det['confidence']*100:.1f}% | Série: {sustained_positive_count}/{SUSTAINED_FRAMES} | Cooldown: {cooldown_remaining}s")
+                if fire_first_seen_time is None:
+                    fire_first_seen_time = now
+                fire_last_seen_time = now
+                sustained_duration = now - fire_first_seen_time
 
-                if sustained_positive_count >= SUSTAINED_FRAMES:
+                print(f"[IA Vision] FLAMME DÉTECTÉE ! Confiance: {top_det['confidence']*100:.1f}% | Soutenu: {sustained_duration:.2f}s/{SUSTAINED_SECONDS:.1f}s | Cooldown: {cooldown_remaining}s")
+
+                if sustained_duration >= SUSTAINED_SECONDS:
                     if not cooldown_active:
-                        print(f"\n[IA Vision] >>> 🔥🔥🔥 DÉTECTION SOUTENUE ! ENVOI DU WEBHOOK À SPRING BOOT ! 🔥🔥🔥\n")
+                        print(f"\n[IA Vision] >>> 🔥🔥🔥 DÉPART DE FEU CONFIRMÉ (Soutenu {sustained_duration:.1f}s >= {SUSTAINED_SECONDS:.1f}s à {top_det['confidence']*100:.1f}%) ! ENVOI DU WEBHOOK À SPRING BOOT ! 🔥🔥🔥\n")
                         timestamp_str = datetime.now().strftime("%Y%m%d_%H%M%S")
                         filename = f"detection_{timestamp_str}.jpg"
                         snapshot_path = os.path.join(SNAPSHOTS_DIR, filename)
@@ -200,7 +210,7 @@ def main():
                         for d in qualifying:
                             b = d["box"]
                             cv2.rectangle(snap, (b[0], b[1]), (b[2], b[3]), (0, 0, 255), 3)
-                            cv2.putText(snap, f"{d['label'].upper()} {d['confidence']*100:.0f}%",
+                            cv2.putText(snap, f"{d['label'].upper()} {d['confidence']*100:.0f}% ({sustained_duration:.1f}s)",
                                         (b[0], max(20, b[1] - 8)), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
                         cv2.imwrite(snapshot_path, snap)
 
@@ -216,12 +226,16 @@ def main():
                         last_trigger_time = now
                         total_detections_fired += 1
                     else:
-                        print(f"[IA Vision] Détection soutenue mais cooldown anti-spam actif ({cooldown_remaining}s restantes).")
+                        print(f"[IA Vision] Flamme soutenue ({sustained_duration:.1f}s) mais cooldown anti-spam actif ({cooldown_remaining}s restantes).")
 
-                    sustained_positive_count = 0
+                    # Reset timer after firing
+                    fire_first_seen_time = None
+                    sustained_duration = 0.0
             else:
-                if sustained_positive_count > 0:
-                    sustained_positive_count = 0
+                # If no fire seen for more than 0.6 seconds (grace period against camera flicker)
+                if fire_first_seen_time is not None and (now - fire_last_seen_time > 0.6):
+                    fire_first_seen_time = None
+                    sustained_duration = 0.0
 
         # Build visual HUD frame
         display_frame = raw_frame.copy()
@@ -229,7 +243,7 @@ def main():
 
         with state_lock:
             current_dets = list(latest_detections)
-            s_count = sustained_positive_count
+            s_duration = sustained_duration
             now = time.time()
             c_rem = max(0, int(COOLDOWN_SECONDS - (now - last_trigger_time)))
 
@@ -237,18 +251,16 @@ def main():
         for d in current_dets:
             b = d["box"]
             color = (0, 0, 255) if d["label"] == "fire" else (180, 180, 180)
-            # Box
             cv2.rectangle(display_frame, (b[0], b[1]), (b[2], b[3]), color, 3)
-            # Label
             lbl = f"{d['label'].upper()}: {d['confidence']*100:.0f}%"
-            cv2.rectangle(display_frame, (b[0], max(0, b[1] - 25)), (b[0] + 150, max(25, b[1])), color, -1)
+            cv2.rectangle(display_frame, (b[0], max(0, b[1] - 25)), (b[0] + 160, max(25, b[1])), color, -1)
             cv2.putText(display_frame, lbl, (b[0] + 6, max(18, b[1] - 6)),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.55, (255, 255, 255), 2, cv2.LINE_AA)
 
         # Top OSD Bar
         cv2.rectangle(display_frame, (0, 0), (w, 36), (15, 23, 42), -1)
         src_color = (0, 255, 128) if ingester.is_real_stream else (0, 180, 255)
-        cv2.putText(display_frame, f"SOURCE: {ingester.source_description.upper()}", (12, 24),
+        cv2.putText(display_frame, f"SOURCE: {ingester.source_description.upper()} | SEUIL: >={int(CONFIDENCE_THRESHOLD*100)}% (2.0s)", (12, 24),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.5, src_color, 1, cv2.LINE_AA)
         cv2.putText(display_frame, datetime.now().strftime("%Y-%m-%d %H:%M:%S"), (w - 185, 24),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.5, (220, 220, 220), 1, cv2.LINE_AA)
@@ -256,13 +268,27 @@ def main():
         # Bottom Telemetry Bar
         cv2.rectangle(display_frame, (0, h - 36), (w, h), (15, 23, 42), -1)
         if current_dets:
-            stat_color = (0, 0, 255) # Red
-            stat_text = f"FLAMME DETECTEE ({current_dets[0]['confidence']*100:.0f}%) | SERIE: {s_count}/{SUSTAINED_FRAMES} | COOLDOWN: {'ACTIF ('+str(c_rem)+'s)' if c_rem > 0 else 'PRET'}"
+            top_c = current_dets[0]['confidence']
+            if top_c >= CONFIDENCE_THRESHOLD:
+                if s_duration >= SUSTAINED_SECONDS:
+                    stat_color = (0, 0, 255) # Red
+                    stat_text = f"DEPART DE FEU CONFIRME (>= 2s) ! TRANSMISSION EN COURS ({top_c*100:.0f}%)"
+                else:
+                    stat_color = (0, 165, 255) # Amber / Orange
+                    stat_text = f"ANOMALIE DETECTEE ({top_c*100:.0f}%) | CONFIRMATION: {s_duration:.1f}s/{SUSTAINED_SECONDS:.1f}s | CD: {'ACTIF ('+str(c_rem)+'s)' if c_rem > 0 else 'PRET'}"
+                    # Draw a mini progress bar on the right side of the bottom bar
+                    prog_pct = min(1.0, s_duration / SUSTAINED_SECONDS)
+                    prog_w = int(prog_pct * 140)
+                    cv2.rectangle(display_frame, (w - 160, h - 24), (w - 160 + prog_w, h - 12), (0, 165, 255), -1)
+                    cv2.rectangle(display_frame, (w - 160, h - 24), (w - 20, h - 12), (255, 255, 255), 1)
+            else:
+                stat_color = (0, 255, 255) # Yellow
+                stat_text = f"TRACE VISUELLE ({top_c*100:.0f}% < {int(CONFIDENCE_THRESHOLD*100)}% SEUIL) | SURVEILLANCE NORMALE"
         else:
             stat_color = (0, 255, 128) # Green
-            stat_text = f"SURVEILLANCE ACTIVE | AUCUNE FLAMME | SERIE: 0/{SUSTAINED_FRAMES} | COOLDOWN: {'ACTIF ('+str(c_rem)+'s)' if c_rem > 0 else 'PRET'}"
+            stat_text = f"SURVEILLANCE ACTIVE | AUCUN FEU | CD: {'ACTIF ('+str(c_rem)+'s)' if c_rem > 0 else 'PRET'}"
 
-        cv2.putText(display_frame, stat_text, (12, h - 12), cv2.FONT_HERSHEY_SIMPLEX, 0.48, stat_color, 1, cv2.LINE_AA)
+        cv2.putText(display_frame, stat_text, (12, h - 12), cv2.FONT_HERSHEY_SIMPLEX, 0.46, stat_color, 1, cv2.LINE_AA)
 
         with state_lock:
             latest_display_frame = display_frame

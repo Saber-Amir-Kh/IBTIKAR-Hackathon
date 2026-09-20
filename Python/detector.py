@@ -32,19 +32,19 @@ class HeuristicFireDetector(BaseDetector):
         hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
         b, g, r = cv2.split(frame)
 
-        # Flame must be very bright (V > 210) and saturated
-        lower_fire1 = np.array([0, 120, 210])
-        upper_fire1 = np.array([30, 255, 255])
+        # Flame detection: sensitive to photos and screens (V >= 160, S >= 90)
+        lower_fire1 = np.array([0, 90, 160])
+        upper_fire1 = np.array([35, 255, 255])
         mask1 = cv2.inRange(hsv, lower_fire1, upper_fire1)
 
-        lower_fire2 = np.array([165, 120, 210])
+        lower_fire2 = np.array([160, 90, 160])
         upper_fire2 = np.array([180, 255, 255])
         mask2 = cv2.inRange(hsv, lower_fire2, upper_fire2)
 
         fire_hsv = cv2.bitwise_or(mask1, mask2)
 
-        # High-intensity flame rule: R is very bright, R > G + 30, G > B
-        flame_rgb_rule = (r > 200) & (r > (g.astype(np.int16) + 25)) & (g > b)
+        # Flame rule: R channel prominence over G and B with sensitivity for image displays
+        flame_rgb_rule = (r > 165) & (r > (g.astype(np.int16) + 15)) & (g > b)
         fire_mask = cv2.bitwise_and(fire_hsv, fire_hsv, mask=flame_rgb_rule.astype(np.uint8) * 255)
 
         # Remove skin pixels completely
@@ -114,7 +114,7 @@ class YOLOv8FireDetector(BaseDetector):
             print(f"[YOLO] Initialization error: {e}")
             self.is_loaded = False
 
-    def detect(self, frame: np.ndarray, conf_threshold: float = 0.40) -> List[Dict[str, Any]]:
+    def detect(self, frame: np.ndarray, conf_threshold: float = 0.28) -> List[Dict[str, Any]]:
         if not self.is_loaded or self.model is None or frame is None:
             return []
 
@@ -158,7 +158,7 @@ class CompositeFireDetector(BaseDetector):
 
     def detect(self, frame: np.ndarray) -> List[Dict[str, Any]]:
         if self.yolo.is_loaded and self.yolo.has_fire_classes:
-            return self.yolo.detect(frame, conf_threshold=0.40)
+            return self.yolo.detect(frame, conf_threshold=0.28)
 
         if self.heuristic:
             return self.heuristic.detect(frame)
