@@ -517,10 +517,28 @@ body {
 }
 
 /* Map Container */
+.map-wrapper {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 400px;
+  overflow: hidden;
+  background: #040100;
+}
+
+.leaflet-map-container {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  background: #040100;
+}
+
 .map-container {
   height: 100%;
   width: 100%;
-  background: #09090b;
+  background: #040100;
 }
 
 /* Tactical Map Legend */
@@ -528,29 +546,68 @@ body {
   position: absolute;
   bottom: 24px;
   left: 24px;
-  background: rgba(4, 1, 0, 0.9);
-  backdrop-filter: blur(12px);
+  background: rgba(4, 1, 0, 0.92);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
   border: 1px solid var(--border-color);
-  border-radius: 6px;
+  border-radius: 8px;
   padding: 10px 14px;
   z-index: 1000;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 7px;
   font-size: 11.5px;
   font-family: var(--font-body);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.65);
 }
 
 .legend-item {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 9px;
+  color: var(--text-light);
+  font-weight: 500;
 }
 
+.legend-color,
 .legend-dot {
-  width: 9px;
-  height: 9px;
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.legend-red-pulse {
+  background: #ef4444;
+  box-shadow: 0 0 8px rgba(239, 68, 68, 0.85);
+  animation: miniPulse 1.6s infinite;
+}
+
+.legend-red {
+  background: #dc2626;
+  box-shadow: 0 0 6px rgba(220, 38, 38, 0.7);
+}
+
+.legend-orange {
+  background: #f59e0b;
+  box-shadow: 0 0 6px rgba(245, 158, 11, 0.7);
+}
+
+.legend-green {
+  background: #10b981;
+  box-shadow: 0 0 6px rgba(16, 185, 129, 0.7);
+}
+
+.legend-blue {
+  background: #38bdf8;
+  box-shadow: 0 0 6px rgba(56, 189, 248, 0.7);
+}
+
+@keyframes miniPulse {
+  0% { transform: scale(0.95); opacity: 0.8; }
+  50% { transform: scale(1.15); opacity: 1; }
+  100% { transform: scale(0.95); opacity: 0.8; }
 }
 
 /* Drone Markers */
@@ -562,18 +619,20 @@ body {
 
 .drone-marker-pin {
   transition: transform 0.5s ease;
+  filter: drop-shadow(0 2px 8px rgba(37, 99, 235, 0.7));
 }
 
 .drone-marker-label {
   font-size: 10px;
   font-weight: 700;
-  background: rgba(4, 1, 0, 0.85);
-  color: #fff;
-  padding: 1px 5px;
+  background: rgba(4, 1, 0, 0.9);
+  color: #38bdf8;
+  padding: 1px 6px;
   border-radius: 4px;
-  border: 1px solid var(--border-color);
+  border: 1px solid rgba(56, 189, 248, 0.4);
   white-space: nowrap;
   margin-top: 2px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.5);
 }
 
 /* Incident Marker */
@@ -592,17 +651,24 @@ body {
   justify-content: center;
   border: 2px solid #fff;
   cursor: pointer;
-  box-shadow: 0 0 14px rgba(0, 0, 0, 0.6);
-  transition: transform 0.2s;
+  box-shadow: 0 0 16px rgba(0, 0, 0, 0.75);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.incident-inner-icon {
+  font-size: 16px;
+  line-height: 1;
 }
 
 .incident-pin:hover {
-  transform: scale(1.15);
+  transform: scale(1.18);
+  box-shadow: 0 0 20px rgba(239, 68, 68, 0.8);
 }
 
 .marker-selected {
   outline: 3px solid #38bdf8;
-  outline-offset: 2px;
+  outline-offset: 3px;
+  box-shadow: 0 0 24px rgba(56, 189, 248, 0.8) !important;
 }
 
 .marker-pulse-red {
@@ -611,8 +677,88 @@ body {
 
 @keyframes radarPulse {
   0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.8); }
-  70% { box-shadow: 0 0 0 16px rgba(239, 68, 68, 0); }
+  70% { box-shadow: 0 0 0 18px rgba(239, 68, 68, 0); }
   100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+}
+
+/* Leaflet Dark Tactical Theme Overrides */
+.leaflet-bar {
+  border: 1px solid var(--border-color) !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6) !important;
+  border-radius: 6px !important;
+  overflow: hidden;
+}
+
+.leaflet-bar a {
+  background-color: rgba(15, 13, 12, 0.92) !important;
+  color: #fcf8f6 !important;
+  border-bottom: 1px solid var(--border-color) !important;
+  transition: background 0.15s, color 0.15s;
+}
+
+.leaflet-bar a:hover {
+  background-color: #242220 !important;
+  color: #38bdf8 !important;
+}
+
+.leaflet-control-layers {
+  background: rgba(15, 13, 12, 0.92) !important;
+  border: 1px solid var(--border-color) !important;
+  color: #fcf8f6 !important;
+  border-radius: 8px !important;
+  font-family: var(--font-body) !important;
+  font-size: 12px !important;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.65) !important;
+  padding: 8px 12px !important;
+}
+
+.leaflet-control-layers-expanded {
+  padding: 8px 12px !important;
+}
+
+.leaflet-control-layers label {
+  cursor: pointer;
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.leaflet-tooltip {
+  background: rgba(10, 7, 6, 0.95) !important;
+  color: var(--text-main) !important;
+  border: 1px solid var(--border-color) !important;
+  border-radius: 6px !important;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.7) !important;
+  font-family: var(--font-body) !important;
+  font-size: 11.5px !important;
+  padding: 8px 12px !important;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.leaflet-tooltip-top:before { border-top-color: var(--border-color) !important; }
+.leaflet-tooltip-bottom:before { border-bottom-color: var(--border-color) !important; }
+.leaflet-tooltip-left:before { border-left-color: var(--border-color) !important; }
+.leaflet-tooltip-right:before { border-right-color: var(--border-color) !important; }
+
+.leaflet-control-attribution {
+  background: rgba(4, 1, 0, 0.75) !important;
+  color: #71717a !important;
+  font-size: 10px !important;
+}
+
+.leaflet-control-attribution a {
+  color: #a1a1aa !important;
+}
+
+.tactical-recenter-btn a {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
 }
 
 /* ==========================================================================

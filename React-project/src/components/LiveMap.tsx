@@ -32,18 +32,53 @@ export const LiveMap: React.FC<LiveMapProps> = ({
   useEffect(() => {
     if (!mapContainerRef.current || mapInstanceRef.current) return;
 
-    // Center on Northern Algeria (between Tipaza, Algiers, Bouira, Tizi Ouzou)
+    // Center on Northern Algeria (Tipaza, Algiers, Bouira, Tizi Ouzou corridor)
     const map = L.map(mapContainerRef.current, {
       center: [36.55, 3.25],
       zoom: 9,
       zoomControl: true,
     });
 
-    // Clean OpenStreetMap tiles (no API key required)
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; OpenStreetMap contributors',
+    // Dark Matter Tactical Basemap (High contrast, dark UI matching #040100)
+    const darkMatter = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+      subdomains: 'abcd',
+      maxZoom: 20,
+    });
+
+    // Satellite Imagery Basemap (Esri World Imagery)
+    const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+      attribution: '&copy; Esri, Maxar, Earthstar Geographics',
       maxZoom: 19,
-    }).addTo(map);
+    });
+
+    // Add dark tactical layer by default
+    darkMatter.addTo(map);
+
+    // Layer Switcher (Tactical Dark vs Satellite)
+    const baseLayers = {
+      "Tactique (Sombre)": darkMatter,
+      "Satellite HD": satellite,
+    };
+    L.control.layers(baseLayers, undefined, { position: 'topright' }).addTo(map);
+
+    // Tactical Recenter Button (Top-Left under zoom)
+    const recenterControl = new L.Control({ position: 'topleft' });
+    recenterControl.onAdd = () => {
+      const container = L.DomUtil.create('div', 'leaflet-bar tactical-recenter-btn');
+      const btn = L.DomUtil.create('a', '', container);
+      btn.href = '#';
+      btn.title = 'Recentrer sur la zone opérationnelle';
+      btn.setAttribute('role', 'button');
+      btn.innerHTML = '🎯';
+      L.DomEvent.disableClickPropagation(container);
+      L.DomEvent.on(btn, 'click', (e) => {
+        L.DomEvent.preventDefault(e);
+        map.flyTo([36.55, 3.25], 9, { duration: 1.0 });
+      });
+      return container;
+    };
+    recenterControl.addTo(map);
 
     droneLayerRef.current = L.layerGroup().addTo(map);
     incidentLayerRef.current = L.layerGroup().addTo(map);
@@ -51,7 +86,21 @@ export const LiveMap: React.FC<LiveMapProps> = ({
 
     mapInstanceRef.current = map;
 
+    // Invalidate size after layout settles to guarantee no 0-height glitch
+    const timer = setTimeout(() => {
+      map.invalidateSize();
+    }, 150);
+
+    const resizeObserver = new ResizeObserver(() => {
+      map.invalidateSize();
+    });
+    if (mapContainerRef.current) {
+      resizeObserver.observe(mapContainerRef.current);
+    }
+
     return () => {
+      clearTimeout(timer);
+      resizeObserver.disconnect();
       map.remove();
       mapInstanceRef.current = null;
     };
@@ -152,6 +201,15 @@ export const LiveMap: React.FC<LiveMapProps> = ({
       incidentLayerRef.current?.addLayer(marker);
     });
   }, [incidents, selectedIncident, onSelectIncident]);
+
+  // Auto-fly to selected incident
+  useEffect(() => {
+    if (selectedIncident && mapInstanceRef.current) {
+      mapInstanceRef.current.flyTo([selectedIncident.lat, selectedIncident.lon], 12, {
+        duration: 1.0,
+      });
+    }
+  }, [selectedIncident]);
 
   // Update Planting Zones Polygon Overlays
   useEffect(() => {
