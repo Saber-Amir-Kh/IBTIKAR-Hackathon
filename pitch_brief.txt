@@ -1,0 +1,186 @@
+# 🔥 Sentinelle — Hackathon Pitch Brief
+
+---
+
+## 🎯 The Hook (Open With This)
+
+> *"Every year, Algeria loses tens of thousands of hectares of forest to wildfires. Most of them start small — and the window to stop them is measured in minutes, not hours. The problem isn't the fire. It's the delay."*
+
+---
+
+## 📣 The Problem (30 seconds)
+
+- Wildfires in Algeria are detected **too late** — by neighbors, passing drivers, or visible smoke columns
+- By the time a report reaches the right team, **the fire has already spread**
+- Response is **fragmented** — civil protection, village committees, and volunteers have no shared picture
+- There is **no real-time coordination tool** built for Algeria's context
+
+---
+
+## 💡 Our Solution (60 seconds)
+
+**Sentinelle** is an AI-powered wildfire early warning and coordination platform built for Algeria.
+
+It does **three things**:
+
+### 1. 🤖 Detects fires the moment they start
+- A camera (drone or fixed) feeds live video into our AI model
+- The AI watches for **smoke and fire 24/7**, even when humans aren't looking
+- When it spots something suspicious, it doesn't just alert immediately — it **waits 2 seconds of confirmed detection** before raising an alarm, eliminating false alerts
+
+### 2. 🗺️ Puts every alert on a live map
+- Each confirmed fire gets pinned on a real-time map with **exact GPS coordinates**
+- Decision-makers see everything at once — active fires, drone positions, team deployments
+- No phone calls, no guessing where the fire is
+
+### 3. 👥 Coordinates the response teams
+- Teams can be assigned to incidents from the dashboard: Civil Protection, Village Committees (Tajmaât), Volunteer Brigades, Eco Clubs, and Drone Pilots
+- Every stakeholder has a **role-based view** — coordinators see everything, volunteers see their assignments
+- A mutual aid board lets teams request and offer resources across regions
+
+---
+
+## 🌍 Why It Matters for Algeria
+
+- Built with **Algerian teams in mind**: Tajmaât committees, Touiza volunteers, Civil Protection — these are real structures we support
+- Works with **existing cameras and drones** — no need to buy new hardware
+- The interface is in **French**, adapted for DZ operational context
+- Designed for **low-bandwidth field conditions**
+
+---
+
+## 🏆 What Makes It Different
+
+| Other Systems | Sentinelle |
+|---|---|
+| Satellite detection (30-min delay) | Real-time < 5 seconds |
+| Single agency tools | Multi-stakeholder coordination |
+| Complex expensive hardware | Works with any webcam or drone |
+| Generic international platforms | Built for Algeria's teams and structures |
+
+---
+
+## 📊 Demo Talking Points (What to Show)
+
+1. **Live feed** → AI detects smoke/fire in real time on camera
+2. **Alert card appears** → shows location, confidence %, drone ID, thumbnail
+3. **Map view** → fire pinned with GPS coordinates
+4. **Team assignment** → assign Civil Protection in one click
+5. **Fire management panel** → manage, inspect, dismiss, or confirm alerts
+6. **Role switcher** → show coordinator vs volunteer view
+
+---
+
+## 🔮 Vision / Scale-Up
+
+- Deploy across **wilayas** with fixed cameras at forest edges
+- Integrate **government drone fleets** as they expand
+- Add **SMS/push alerts** for village committee chiefs
+- Feed data into a **national wildfire risk map** updated in real time
+- Long-term: predictive risk scoring by zone based on weather + history
+
+---
+
+---
+
+# 🧠 Technical Deep-Dive (For Questions)
+
+---
+
+## Architecture Overview
+
+```
+[Camera / Drone Feed]
+        ↓
+[Python AI Service — Port 8001]
+   • YOLOv8n fine-tuned on fire/smoke dataset
+   • 2-second sustained detection window (eliminates 1-frame glitches)
+   • Skin-tone rejection filter (prevents false positives on people)
+   • Adaptive illumination normalization (CLAHE in LAB space)
+        ↓
+[Spring Boot Backend — Port 8080]
+   • REST API for incidents, drones, teams, needs, zones
+   • WebSocket broadcast for real-time frontend updates
+   • PostgreSQL persistence
+        ↓
+[React Frontend — Port 5173]
+   • Live map (Leaflet.js)
+   • Fire & Drone management panels
+   • Role-based UI (Coordinator / Committee Head / Volunteer / Eco Club)
+```
+
+---
+
+## AI Detection Pipeline
+
+- **Model**: YOLOv8n retrained on fire/smoke dataset (classes: `fire`, `smoke`)
+- **Confidence gate**: Detection must hit **≥ 70% confidence** to create a new alert track
+- **Sustained confirmation**: A zone must maintain detection for **2 continuous seconds** before an incident is filed — prevents single-frame false positives
+- **Stutter memory**: 0.8-second grace window so a real fire that flickers in detection doesn't reset its 2-second counter
+- **Illumination invariance**: CLAHE (Contrast Limited Adaptive Histogram Equalization) in LAB color space normalizes both bright indoor and dark outdoor scenes
+- **Face/false positive rejection**: Skin-tone detection in YCrCb + HSV color spaces suppresses detections on human faces (the model was occasionally misidentifying dark hair as smoke)
+
+---
+
+## Spatial Tracking
+
+- Detections are tracked as **spatial zones** using IoU (Intersection over Union) overlap
+- Each zone is a `TrackedFireArea` object with position, confidence history, and duration
+- New zones require **≥ 70% confidence** (hard floor — never lowered)
+- Existing active zones are sustained at **≥ 62% confidence** to tolerate lighting changes
+
+---
+
+## Real-Time Communication
+
+- **WebSocket** (Spring Boot `SimpMessagingTemplate`) broadcasts events to all connected clients:
+  - `detection` → new fire area detected
+  - `incident_updated` → status change (PENDING → ACTIVE → CONTAINED)
+  - `incident_deleted` → fire dismissed/deleted
+  - `demo_reset` → full system reset
+- Frontend reconnects automatically on disconnect
+
+---
+
+## State Machine (Incident Lifecycle)
+
+```
+PENDING_VERIFICATION → ACTIVE → CONTAINED → REFORESTATION
+                    ↘ DISMISSED
+```
+
+- Only valid transitions are allowed (enforced server-side)
+- Each transition is broadcast via WebSocket to all dashboards in real time
+
+---
+
+## Stack Summary
+
+| Layer | Technology |
+|---|---|
+| AI Inference | Python 3.13 + YOLOv8 (Ultralytics) + OpenCV 5.0 |
+| AI Server | FastAPI + Uvicorn (async MJPEG stream) |
+| Backend | Java 21 + Spring Boot 3 + WebSocket |
+| Database | PostgreSQL |
+| Frontend | React 18 + TypeScript + Vite |
+| Map | Leaflet.js |
+| Build | Maven (backend) + npm (frontend) |
+
+---
+
+## Likely Questions & Answers
+
+**Q: What if the internet is slow or down?**
+> The AI service and backend run locally on the field device. The frontend connects over LAN — no internet required for real-time detection. Only the map tiles need internet.
+
+**Q: How accurate is the model?**
+> Our YOLOv8n model requires ≥70% confidence sustained over 2 seconds. In testing it correctly detected phone footage of real fire and suppressed faces, hands, and background lighting changes.
+
+**Q: Can it work with existing government cameras?**
+> Yes — any RTSP stream or HTTP camera URL can replace the webcam source with one config change. We also support drone camera feeds.
+
+**Q: What about privacy?**
+> The camera only processes frames locally — no video is stored or transmitted to the cloud. Only the detection snapshot (a single JPEG at the moment of alert) is saved.
+
+**Q: How do you scale this?**
+> Each camera/drone runs its own Python AI node. The Spring Boot backend is a central hub. You can add as many camera nodes as needed — they all report to the same backend and appear on the same map.
